@@ -70,14 +70,11 @@ export const InvestmentPlans = () => {
 
 const PlanCard = ({ plan }: { plan: InvestmentPlan }) => (
   <Card className="relative overflow-hidden hover:border-primary/50 transition-all hover:shadow-lg">
-    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-cyan-400" />
+    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-primary/70" />
     
     <CardHeader className="text-center pb-2">
       <CardTitle className="text-lg">{plan.name}</CardTitle>
-      <div className="mt-4">
-        <span className="text-4xl font-bold">${plan.amount.toLocaleString()}</span>
-      </div>
-      <div className="mt-2 inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
+      <div className="mt-4 inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
         {plan.roi}% ROI Daily
       </div>
     </CardHeader>
