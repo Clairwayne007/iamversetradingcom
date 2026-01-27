@@ -54,7 +54,9 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="h-16 flex items-center justify-between px-4 border-b border-border">
-            {!collapsed && <Logo size="sm" />}
+            <Link to="/" aria-label="IAMVERSE Home">
+              <Logo size="sm" showText={!collapsed} className={cn(collapsed && "justify-center")} />
+            </Link>
             <Button
               variant="ghost"
               size="icon"
@@ -108,9 +110,14 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       <div className={cn("flex-1 transition-all duration-300", collapsed ? "ml-16" : "ml-64")}>
         {/* Top bar */}
         <header className="h-16 border-b border-border bg-card flex items-center justify-between px-6 sticky top-0 z-30">
-          <h1 className="text-xl font-semibold">
-            {investorNavItems.find((item) => item.path === location.pathname)?.label || "Dashboard"}
-          </h1>
+          <div className="flex items-center gap-3 min-w-0">
+            <Link to="/" aria-label="IAMVERSE Home" className="shrink-0">
+              <Logo size="sm" showText={false} />
+            </Link>
+            <h1 className="text-xl font-semibold truncate">
+              {investorNavItems.find((item) => item.path === location.pathname)?.label || "Dashboard"}
+            </h1>
+          </div>
           <div className="flex items-center gap-4">
             <ThemeToggle />
             <div className="text-right">
