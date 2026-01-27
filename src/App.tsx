@@ -3,24 +3,164 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "@/contexts/ThemeContext";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+
+// Pages
 import Index from "./pages/Index";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
+
+// Dashboard pages
+import Dashboard from "./pages/dashboard/Overview";
+import Investments from "./pages/dashboard/Investments";
+import Trading from "./pages/dashboard/Trading";
+import Wallet from "./pages/dashboard/Wallet";
+import Transactions from "./pages/dashboard/Transactions";
+import Profile from "./pages/dashboard/Profile";
+import Settings from "./pages/dashboard/Settings";
+
+// Admin pages
+import AdminOverview from "./pages/admin/Overview";
+import UserManagement from "./pages/admin/UserManagement";
+import AdminTransactions from "./pages/admin/Transactions";
+import AdminInvestments from "./pages/admin/Investments";
+import AdminSecurity from "./pages/admin/Security";
+import AdminSettings from "./pages/admin/Settings";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+
+              {/* Investor dashboard routes */}
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={["investor"]}>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard/investments"
+                element={
+                  <ProtectedRoute allowedRoles={["investor"]}>
+                    <Investments />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard/trading"
+                element={
+                  <ProtectedRoute allowedRoles={["investor"]}>
+                    <Trading />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard/wallet"
+                element={
+                  <ProtectedRoute allowedRoles={["investor"]}>
+                    <Wallet />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard/transactions"
+                element={
+                  <ProtectedRoute allowedRoles={["investor"]}>
+                    <Transactions />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard/profile"
+                element={
+                  <ProtectedRoute allowedRoles={["investor"]}>
+                    <Profile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard/settings"
+                element={
+                  <ProtectedRoute allowedRoles={["investor"]}>
+                    <Settings />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Admin dashboard routes */}
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <AdminOverview />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/users"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <UserManagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/transactions"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <AdminTransactions />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/investments"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <AdminInvestments />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/security"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <AdminSecurity />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/settings"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <AdminSettings />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Catch-all route */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
