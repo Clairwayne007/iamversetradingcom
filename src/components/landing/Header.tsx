@@ -13,7 +13,6 @@ export const Header = () => {
         </Link>
 
         <nav className="hidden md:flex items-center gap-8">
-          <NavItem label="THE ACADEMI" />
           <NavItem label="ABOUT" />
           <NavItem label="DISCOVER" />
           <NavItem label="INFORMATION" />

@@ -52,14 +52,16 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="h-16 flex items-center justify-between px-4 border-b border-border">
-            {!collapsed && (
-              <div className="flex items-center gap-2">
-                <Logo size="sm" />
+            <div className={cn("flex items-center", collapsed ? "gap-0" : "gap-2")}>
+              <Link to="/" aria-label="IAMVERSE Home">
+                <Logo size="sm" showText={!collapsed} />
+              </Link>
+              {!collapsed && (
                 <span className="text-xs bg-destructive text-destructive-foreground px-2 py-0.5 rounded">
                   Admin
                 </span>
-              </div>
-            )}
+              )}
+            </div>
             <Button
               variant="ghost"
               size="icon"
@@ -113,9 +115,14 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
       <div className={cn("flex-1 transition-all duration-300", collapsed ? "ml-16" : "ml-64")}>
         {/* Top bar */}
         <header className="h-16 border-b border-border bg-card flex items-center justify-between px-6 sticky top-0 z-30">
-          <h1 className="text-xl font-semibold">
-            {adminNavItems.find((item) => item.path === location.pathname)?.label || "Admin Dashboard"}
-          </h1>
+          <div className="flex items-center gap-3 min-w-0">
+            <Link to="/" aria-label="IAMVERSE Home" className="shrink-0">
+              <Logo size="sm" showText={false} />
+            </Link>
+            <h1 className="text-xl font-semibold truncate">
+              {adminNavItems.find((item) => item.path === location.pathname)?.label || "Admin Dashboard"}
+            </h1>
+          </div>
           <ThemeToggle />
         </header>
 
