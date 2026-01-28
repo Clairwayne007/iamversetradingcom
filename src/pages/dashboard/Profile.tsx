@@ -1,10 +1,22 @@
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
+import { useInvestments } from "@/hooks/useInvestments";
+import { useDeposits } from "@/hooks/useDeposits";
 import { User, Mail, Calendar, Shield } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
+  const { totalInvested, totalEarned, activeInvestments, isLoading: investmentsLoading } = useInvestments();
+  const { deposits, isLoading: depositsLoading } = useDeposits();
+
+  const isLoading = authLoading || investmentsLoading || depositsLoading;
+
+  // Calculate real stats
+  const confirmedDeposits = deposits.filter((d) => d.status === "confirmed");
+  const totalDeposited = confirmedDeposits.reduce((sum, d) => sum + Number(d.amount_usd), 0);
+  const totalWithdrawals = 0; // Will be calculated when withdrawals hook is added
 
   return (
     <DashboardLayout>
@@ -17,36 +29,46 @@ const Profile = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex items-center gap-4">
-              <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-2xl font-bold text-primary">
-                  {user?.name?.charAt(0).toUpperCase()}
-                </span>
+            {isLoading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
               </div>
-              <div>
-                <h3 className="text-xl font-semibold">{user?.name}</h3>
-                <p className="text-muted-foreground capitalize">{user?.role} Account</p>
-              </div>
-            </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-4">
+                  <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
+                    <span className="text-2xl font-bold text-primary">
+                      {user?.name?.charAt(0).toUpperCase() || "?"}
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold">{user?.name || "User"}</h3>
+                    <p className="text-muted-foreground capitalize">{user?.role || "Investor"} Account</p>
+                  </div>
+                </div>
 
-            <div className="grid gap-4">
-              <ProfileField icon={Mail} label="Email" value={user?.email || ""} />
-              <ProfileField
-                icon={Calendar}
-                label="Member Since"
-                value={new Date(user?.createdAt || "").toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              />
-              <ProfileField
-                icon={Shield}
-                label="Account Status"
-                value="Verified"
-                valueClassName="text-success"
-              />
-            </div>
+                <div className="grid gap-4">
+                  <ProfileField icon={Mail} label="Email" value={user?.email || ""} />
+                  <ProfileField
+                    icon={Calendar}
+                    label="Member Since"
+                    value={user?.createdAt ? new Date(user.createdAt).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    }) : "N/A"}
+                  />
+                  <ProfileField
+                    icon={Shield}
+                    label="Account Status"
+                    value="Verified"
+                    valueClassName="text-success"
+                  />
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -56,12 +78,36 @@ const Profile = () => {
             <CardTitle>Account Statistics</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <StatBox label="Total Invested" value="$5,000" />
-              <StatBox label="Total Earnings" value="$750" />
-              <StatBox label="Active Plans" value="2" />
-              <StatBox label="Total Withdrawals" value="$500" />
-            </div>
+            {isLoading ? (
+              <div className="grid grid-cols-2 gap-4">
+                {[...Array(4)].map((_, i) => (
+                  <Skeleton key={i} className="h-20 w-full" />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <StatBox 
+                  label="Total Deposited" 
+                  value={totalDeposited > 0 ? `$${totalDeposited.toLocaleString()}` : "$0.00"} 
+                  empty={totalDeposited === 0}
+                />
+                <StatBox 
+                  label="Total Earnings" 
+                  value={totalEarned > 0 ? `$${totalEarned.toLocaleString()}` : "$0.00"} 
+                  empty={totalEarned === 0}
+                />
+                <StatBox 
+                  label="Active Plans" 
+                  value={activeInvestments.length.toString()} 
+                  empty={activeInvestments.length === 0}
+                />
+                <StatBox 
+                  label="Total Withdrawals" 
+                  value={totalWithdrawals > 0 ? `$${totalWithdrawals.toLocaleString()}` : "$0.00"} 
+                  empty={totalWithdrawals === 0}
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -89,10 +135,11 @@ const ProfileField = ({
   </div>
 );
 
-const StatBox = ({ label, value }: { label: string; value: string }) => (
-  <div className="p-4 rounded-lg border border-border text-center">
-    <p className="text-2xl font-bold">{value}</p>
+const StatBox = ({ label, value, empty }: { label: string; value: string; empty?: boolean }) => (
+  <div className={`p-4 rounded-lg border border-border text-center ${empty ? "opacity-60" : ""}`}>
+    <p className={`text-2xl font-bold ${empty ? "text-muted-foreground" : ""}`}>{value}</p>
     <p className="text-sm text-muted-foreground">{label}</p>
+    {empty && <p className="text-xs text-muted-foreground mt-1">No data</p>}
   </div>
 );
 
