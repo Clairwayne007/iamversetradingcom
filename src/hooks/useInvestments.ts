@@ -58,6 +58,32 @@ export const useInvestments = () => {
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + durationDays);
 
+    // First, get current balance and check if sufficient
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("balance")
+      .eq("id", session.user.id)
+      .single();
+
+    if (profileError || !profile) {
+      return { success: false, error: "Failed to fetch profile" };
+    }
+
+    if (Number(profile.balance) < amountUsd) {
+      return { success: false, error: "Insufficient balance" };
+    }
+
+    // Deduct from balance
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ balance: Number(profile.balance) - amountUsd })
+      .eq("id", session.user.id);
+
+    if (updateError) {
+      return { success: false, error: "Failed to update balance" };
+    }
+
+    // Create investment
     const { data, error } = await supabase
       .from("investments")
       .insert({
@@ -75,6 +101,11 @@ export const useInvestments = () => {
 
     if (error) {
       console.error("Error creating investment:", error);
+      // Rollback balance (best effort)
+      await supabase
+        .from("profiles")
+        .update({ balance: Number(profile.balance) })
+        .eq("id", session.user.id);
       return { success: false, error: error.message };
     }
 
