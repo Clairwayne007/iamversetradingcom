@@ -9,6 +9,7 @@ export interface InvestmentPlan {
   amount: number;
   roi: number;
   duration: string;
+  durationDays: number;
   features: string[];
 }
 
@@ -19,6 +20,7 @@ export const investmentPlans: InvestmentPlan[] = [
     amount: 108,
     roi: 10,
     duration: "1 Week 3 Days",
+    durationDays: 10,
     features: ["10% ROI Daily", "Secure Investment", "24/7 Support"],
   },
   {
@@ -27,6 +29,7 @@ export const investmentPlans: InvestmentPlan[] = [
     amount: 2222,
     roi: 20,
     duration: "1 Week 3 Days",
+    durationDays: 10,
     features: ["20% ROI Daily", "Priority Support", "Advanced Analytics"],
   },
   {
@@ -35,6 +38,7 @@ export const investmentPlans: InvestmentPlan[] = [
     amount: 8888,
     roi: 30,
     duration: "1 Week 3 Days",
+    durationDays: 10,
     features: ["30% ROI Daily", "VIP Support", "Premium Features"],
   },
   {
@@ -43,6 +47,7 @@ export const investmentPlans: InvestmentPlan[] = [
     amount: 25000,
     roi: 40,
     duration: "1 Week 3 Days",
+    durationDays: 10,
     features: ["40% ROI Daily", "Dedicated Manager", "Exclusive Access"],
   },
 ];

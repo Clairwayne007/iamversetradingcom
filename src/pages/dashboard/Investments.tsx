@@ -2,10 +2,14 @@ import { useState } from "react";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
+import { useInvestments } from "@/hooks/useInvestments";
 import { useToast } from "@/hooks/use-toast";
 import { investmentPlans, InvestmentPlan } from "@/components/landing/InvestmentPlans";
-import { Check, Clock, TrendingUp } from "lucide-react";
+import { Check, Clock, TrendingUp, AlertCircle } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -14,31 +18,28 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-// Mock active investments - replace with API
-const mockActiveInvestments = [
-  {
-    id: "1",
-    planId: "plan-108",
-    planName: "108 Circle",
-    amount: 108,
-    roi: 10,
-    startDate: "2024-01-20",
-    endDate: "2024-01-30",
-    totalEarned: 86.4,
-    status: "active",
-  },
-];
-
 const Investments = () => {
-  const { user, updateUser } = useAuth();
+  const { user, refreshProfile } = useAuth();
+  const { activeInvestments, isLoading, createInvestment, refetch } = useInvestments();
   const { toast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState<InvestmentPlan | null>(null);
+  const [investmentAmount, setInvestmentAmount] = useState("");
   const [isInvesting, setIsInvesting] = useState(false);
 
   const handleInvest = async () => {
     if (!selectedPlan || !user) return;
 
-    if (user.balance < selectedPlan.amount) {
+    const amount = parseFloat(investmentAmount);
+    if (!amount || amount <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid investment amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (amount > (user.balance || 0)) {
       toast({
         title: "Insufficient Balance",
         description: "Please deposit funds to your wallet first",
@@ -49,27 +50,32 @@ const Investments = () => {
 
     setIsInvesting(true);
     
-    // TODO: Replace with backend API call
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      
-      updateUser({ balance: user.balance - selectedPlan.amount });
-      
+    const result = await createInvestment(
+      selectedPlan.id,
+      selectedPlan.name,
+      amount,
+      selectedPlan.roi,
+      selectedPlan.durationDays
+    );
+
+    if (result.success) {
       toast({
         title: "Investment Successful!",
-        description: `You've invested $${selectedPlan.amount} in ${selectedPlan.name}`,
+        description: `You've invested $${amount.toLocaleString()} in ${selectedPlan.name}`,
       });
-      
       setSelectedPlan(null);
-    } catch (error) {
+      setInvestmentAmount("");
+      refreshProfile();
+      refetch();
+    } else {
       toast({
         title: "Error",
-        description: "Failed to process investment",
+        description: result.error || "Failed to process investment",
         variant: "destructive",
       });
-    } finally {
-      setIsInvesting(false);
     }
+    
+    setIsInvesting(false);
   };
 
   return (
@@ -84,49 +90,65 @@ const Investments = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {mockActiveInvestments.length > 0 ? (
+            {isLoading ? (
               <div className="space-y-4">
-                {mockActiveInvestments.map((inv) => (
-                  <div
-                    key={inv.id}
-                    className="p-4 rounded-lg border border-border bg-muted/30"
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h4 className="font-semibold">{inv.planName}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Started: {inv.startDate}
-                        </p>
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+            ) : activeInvestments.length > 0 ? (
+              <div className="space-y-4">
+                {activeInvestments.map((inv) => {
+                  const daysLeft = inv.end_date
+                    ? Math.max(0, Math.ceil((new Date(inv.end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+                    : inv.duration_days;
+                  return (
+                    <div
+                      key={inv.id}
+                      className="p-4 rounded-lg border border-border bg-muted/30"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h4 className="font-semibold">{inv.plan_name}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Started: {new Date(inv.start_date).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <span className="px-3 py-1 rounded-full bg-success/10 text-success text-sm font-medium">
+                          Active
+                        </span>
                       </div>
-                      <span className="px-3 py-1 rounded-full bg-success/10 text-success text-sm font-medium">
-                        Active
-                      </span>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">Invested</p>
+                          <p className="font-medium">${Number(inv.amount_usd).toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Daily ROI</p>
+                          <p className="font-medium text-primary">{inv.roi_percent}%</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Total Earned</p>
+                          <p className="font-medium text-success">+${Number(inv.earned_amount).toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Days Left</p>
+                          <p className="font-medium">{daysLeft}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Invested</p>
-                        <p className="font-medium">${inv.amount}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Daily ROI</p>
-                        <p className="font-medium text-primary">{inv.roi}%</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Total Earned</p>
-                        <p className="font-medium text-success">+${inv.totalEarned}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">End Date</p>
-                        <p className="font-medium">{inv.endDate}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
-              <p className="text-muted-foreground text-center py-8">
-                No active investments. Choose a plan below to start earning!
-              </p>
+              <div className="text-center py-8">
+                <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No active investments</p>
+                <p className="text-sm text-muted-foreground">
+                  {(user?.balance || 0) > 0 
+                    ? "Choose a plan below to start earning!" 
+                    : "Deposit funds first, then choose an investment plan to start earning!"}
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -141,9 +163,6 @@ const Investments = () => {
                   <CardTitle className="text-lg">{plan.name}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold mb-2">
-                    ${plan.amount.toLocaleString()}
-                  </div>
                   <div className="inline-block px-2 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
                     {plan.roi}% ROI Daily
                   </div>
@@ -161,8 +180,9 @@ const Investments = () => {
                   <Button
                     className="w-full"
                     onClick={() => setSelectedPlan(plan)}
+                    disabled={(user?.balance || 0) <= 0}
                   >
-                    Invest Now
+                    {(user?.balance || 0) <= 0 ? "Deposit First" : "Invest Now"}
                   </Button>
                 </CardContent>
               </Card>
@@ -171,12 +191,15 @@ const Investments = () => {
         </div>
 
         {/* Investment confirmation dialog */}
-        <Dialog open={!!selectedPlan} onOpenChange={() => setSelectedPlan(null)}>
+        <Dialog open={!!selectedPlan} onOpenChange={() => {
+          setSelectedPlan(null);
+          setInvestmentAmount("");
+        }}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Confirm Investment</DialogTitle>
+              <DialogTitle>Invest in {selectedPlan?.name}</DialogTitle>
               <DialogDescription>
-                Review your investment details before proceeding
+                Enter the amount you want to invest
               </DialogDescription>
             </DialogHeader>
             
@@ -188,10 +211,6 @@ const Investments = () => {
                     <span className="font-medium">{selectedPlan.name}</span>
                   </div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-muted-foreground">Amount</span>
-                    <span className="font-medium">${selectedPlan.amount.toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center justify-between mb-2">
                     <span className="text-muted-foreground">Daily ROI</span>
                     <span className="font-medium text-primary">{selectedPlan.roi}%</span>
                   </div>
@@ -201,23 +220,51 @@ const Investments = () => {
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <Label>Investment Amount (USD)</Label>
+                  <Input
+                    type="number"
+                    placeholder="Enter amount"
+                    value={investmentAmount}
+                    onChange={(e) => setInvestmentAmount(e.target.value)}
+                    min="1"
+                    max={user?.balance || 0}
+                  />
+                </div>
+
                 <div className="flex items-center justify-between p-3 rounded-lg border border-border">
                   <span>Your Balance</span>
-                  <span className="font-bold">${user?.balance?.toLocaleString() || 0}</span>
+                  <span className="font-bold">${(user?.balance || 0).toLocaleString()}</span>
                 </div>
+
+                {investmentAmount && parseFloat(investmentAmount) > 0 && (
+                  <div className="p-3 rounded-lg bg-success/10 border border-success/20">
+                    <p className="text-sm text-success">
+                      Estimated daily earnings: ${(parseFloat(investmentAmount) * selectedPlan.roi / 100).toFixed(2)}
+                    </p>
+                  </div>
+                )}
 
                 <div className="flex gap-3">
                   <Button
                     variant="outline"
                     className="flex-1"
-                    onClick={() => setSelectedPlan(null)}
+                    onClick={() => {
+                      setSelectedPlan(null);
+                      setInvestmentAmount("");
+                    }}
                   >
                     Cancel
                   </Button>
                   <Button
                     className="flex-1"
                     onClick={handleInvest}
-                    disabled={isInvesting || (user?.balance || 0) < selectedPlan.amount}
+                    disabled={
+                      isInvesting || 
+                      !investmentAmount || 
+                      parseFloat(investmentAmount) <= 0 ||
+                      parseFloat(investmentAmount) > (user?.balance || 0)
+                    }
                   >
                     {isInvesting ? (
                       <TrendingUp className="h-4 w-4 animate-pulse" />

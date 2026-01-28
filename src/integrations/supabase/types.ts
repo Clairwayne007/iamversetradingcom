@@ -14,7 +14,156 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      deposits: {
+        Row: {
+          amount_usd: number
+          created_at: string | null
+          crypto_amount: number | null
+          crypto_currency: string
+          id: string
+          invoice_id: string | null
+          invoice_url: string | null
+          payment_id: string | null
+          status: Database["public"]["Enums"]["deposit_status"] | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_usd: number
+          created_at?: string | null
+          crypto_amount?: number | null
+          crypto_currency: string
+          id?: string
+          invoice_id?: string | null
+          invoice_url?: string | null
+          payment_id?: string | null
+          status?: Database["public"]["Enums"]["deposit_status"] | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_usd?: number
+          created_at?: string | null
+          crypto_amount?: number | null
+          crypto_currency?: string
+          id?: string
+          invoice_id?: string | null
+          invoice_url?: string | null
+          payment_id?: string | null
+          status?: Database["public"]["Enums"]["deposit_status"] | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      investments: {
+        Row: {
+          amount_usd: number
+          created_at: string | null
+          duration_days: number
+          earned_amount: number | null
+          end_date: string | null
+          id: string
+          plan_id: string
+          plan_name: string
+          roi_percent: number
+          start_date: string | null
+          status: Database["public"]["Enums"]["investment_status"] | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_usd: number
+          created_at?: string | null
+          duration_days: number
+          earned_amount?: number | null
+          end_date?: string | null
+          id?: string
+          plan_id: string
+          plan_name: string
+          roi_percent: number
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["investment_status"] | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_usd?: number
+          created_at?: string | null
+          duration_days?: number
+          earned_amount?: number | null
+          end_date?: string | null
+          id?: string
+          plan_id?: string
+          plan_name?: string
+          roi_percent?: number
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["investment_status"] | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          balance: number | null
+          created_at: string | null
+          email: string
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          balance?: number | null
+          created_at?: string | null
+          email: string
+          id: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          balance?: number | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      withdrawals: {
+        Row: {
+          amount_usd: number
+          created_at: string | null
+          crypto_currency: string
+          id: string
+          status: Database["public"]["Enums"]["withdrawal_status"] | null
+          updated_at: string | null
+          user_id: string
+          wallet_address: string
+        }
+        Insert: {
+          amount_usd: number
+          created_at?: string | null
+          crypto_currency: string
+          id?: string
+          status?: Database["public"]["Enums"]["withdrawal_status"] | null
+          updated_at?: string | null
+          user_id: string
+          wallet_address: string
+        }
+        Update: {
+          amount_usd?: number
+          created_at?: string | null
+          crypto_currency?: string
+          id?: string
+          status?: Database["public"]["Enums"]["withdrawal_status"] | null
+          updated_at?: string | null
+          user_id?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +172,14 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      deposit_status:
+        | "waiting"
+        | "confirming"
+        | "confirmed"
+        | "failed"
+        | "expired"
+      investment_status: "active" | "completed" | "cancelled"
+      withdrawal_status: "pending" | "processing" | "completed" | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +306,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      deposit_status: [
+        "waiting",
+        "confirming",
+        "confirmed",
+        "failed",
+        "expired",
+      ],
+      investment_status: ["active", "completed", "cancelled"],
+      withdrawal_status: ["pending", "processing", "completed", "failed"],
+    },
   },
 } as const

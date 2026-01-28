@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDeposits } from "@/hooks/useDeposits";
 import { useToast } from "@/hooks/use-toast";
-import { Wallet as WalletIcon, ArrowUpRight, ArrowDownRight, Copy, Bitcoin, DollarSign } from "lucide-react";
+import { Wallet as WalletIcon, ArrowUpRight, ArrowDownRight, ExternalLink, RefreshCw, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -15,52 +16,79 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 const cryptoOptions = [
-  { id: "btc", name: "Bitcoin (BTC)", icon: Bitcoin },
-  { id: "eth", name: "Ethereum (ETH)", icon: DollarSign },
-  { id: "usdt", name: "USDT (TRC20)", icon: DollarSign },
-  { id: "ltc", name: "Litecoin (LTC)", icon: DollarSign },
+  { id: "btc", name: "Bitcoin (BTC)" },
+  { id: "eth", name: "Ethereum (ETH)" },
+  { id: "usdttrc20", name: "USDT (TRC20)" },
+  { id: "ltc", name: "Litecoin (LTC)" },
+  { id: "xrp", name: "Ripple (XRP)" },
+  { id: "doge", name: "Dogecoin (DOGE)" },
 ];
 
-// Mock wallet address - would come from NOWPayments API
-const depositAddress = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh";
-
 const Wallet = () => {
-  const { user, updateUser } = useAuth();
+  const { user, refreshProfile } = useAuth();
+  const { deposits, createDeposit, checkDepositStatus, isLoading, refetch } = useDeposits();
   const { toast } = useToast();
   const [depositAmount, setDepositAmount] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawAddress, setWithdrawAddress] = useState("");
   const [selectedCrypto, setSelectedCrypto] = useState("btc");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [pendingInvoiceUrl, setPendingInvoiceUrl] = useState<string | null>(null);
 
-  const copyAddress = () => {
-    navigator.clipboard.writeText(depositAddress);
-    toast({ title: "Copied!", description: "Wallet address copied to clipboard" });
-  };
+  // Poll for pending deposit status updates
+  useEffect(() => {
+    const pendingDeposits = deposits.filter(
+      (d) => d.status === "waiting" || d.status === "confirming"
+    );
+
+    if (pendingDeposits.length > 0) {
+      const interval = setInterval(() => {
+        pendingDeposits.forEach((d) => checkDepositStatus(d.id));
+      }, 30000); // Check every 30 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [deposits, checkDepositStatus]);
+
+  // Refresh profile when a deposit is confirmed
+  useEffect(() => {
+    const hasNewConfirmed = deposits.some((d) => d.status === "confirmed");
+    if (hasNewConfirmed) {
+      refreshProfile();
+    }
+  }, [deposits, refreshProfile]);
 
   const handleDeposit = async () => {
-    if (!depositAmount || parseFloat(depositAmount) <= 0) {
+    const amount = parseFloat(depositAmount);
+    if (!depositAmount || amount <= 0) {
       toast({ title: "Error", description: "Please enter a valid amount", variant: "destructive" });
+      return;
+    }
+
+    if (amount < 10) {
+      toast({ title: "Error", description: "Minimum deposit is $10", variant: "destructive" });
       return;
     }
 
     setIsProcessing(true);
     
-    // TODO: Integrate with NOWPayments API
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      
+    const result = await createDeposit(amount, selectedCrypto);
+    
+    if (result.success && result.invoiceUrl) {
+      setPendingInvoiceUrl(result.invoiceUrl);
       toast({
-        title: "Deposit Initiated",
-        description: `Please send ${depositAmount} USD worth of ${selectedCrypto.toUpperCase()} to the address below`,
+        title: "Invoice Created",
+        description: "Complete your payment in the payment window",
       });
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to initiate deposit", variant: "destructive" });
-    } finally {
-      setIsProcessing(false);
+      // Open payment in new tab
+      window.open(result.invoiceUrl, "_blank");
+      setDepositAmount("");
     }
+    
+    setIsProcessing(false);
   };
 
   const handleWithdraw = async () => {
@@ -81,23 +109,51 @@ const Wallet = () => {
 
     setIsProcessing(true);
     
-    // TODO: Integrate with backend API
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      
-      updateUser({ balance: (user?.balance || 0) - parseFloat(withdrawAmount) });
-      
-      toast({
-        title: "Withdrawal Requested",
-        description: "Your withdrawal is being processed",
-      });
-      
-      setWithdrawAmount("");
-      setWithdrawAddress("");
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to process withdrawal", variant: "destructive" });
-    } finally {
-      setIsProcessing(false);
+    // TODO: Integrate with backend API for withdrawals
+    toast({
+      title: "Withdrawal Requested",
+      description: "Your withdrawal request is being processed. This feature will be available soon.",
+    });
+    
+    setWithdrawAmount("");
+    setWithdrawAddress("");
+    setIsProcessing(false);
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "confirmed":
+        return (
+          <Badge className="bg-success/10 text-success border-success/20">
+            <CheckCircle className="h-3 w-3 mr-1" /> Confirmed
+          </Badge>
+        );
+      case "confirming":
+        return (
+          <Badge className="bg-warning/10 text-warning border-warning/20">
+            <Clock className="h-3 w-3 mr-1" /> Confirming
+          </Badge>
+        );
+      case "waiting":
+        return (
+          <Badge className="bg-primary/10 text-primary border-primary/20">
+            <Clock className="h-3 w-3 mr-1" /> Waiting
+          </Badge>
+        );
+      case "failed":
+        return (
+          <Badge className="bg-destructive/10 text-destructive border-destructive/20">
+            <XCircle className="h-3 w-3 mr-1" /> Failed
+          </Badge>
+        );
+      case "expired":
+        return (
+          <Badge className="bg-muted text-muted-foreground">
+            <AlertCircle className="h-3 w-3 mr-1" /> Expired
+          </Badge>
+        );
+      default:
+        return <Badge>{status}</Badge>;
     }
   };
 
@@ -110,7 +166,7 @@ const Wallet = () => {
             <div className="flex items-center justify-between text-primary-foreground">
               <div>
                 <p className="text-sm opacity-90">Available Balance</p>
-                <p className="text-4xl font-bold mt-1">${user?.balance?.toLocaleString() || "0.00"}</p>
+                <p className="text-4xl font-bold mt-1">${(user?.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 <p className="text-sm opacity-90 mt-2">USD</p>
               </div>
               <WalletIcon className="h-16 w-16 opacity-50" />
@@ -157,27 +213,21 @@ const Wallet = () => {
                   <Label>Amount (USD)</Label>
                   <Input
                     type="number"
-                    placeholder="Enter amount"
+                    placeholder="Enter amount (min $10)"
                     value={depositAmount}
                     onChange={(e) => setDepositAmount(e.target.value)}
+                    min="10"
                   />
                 </div>
 
-                <div className="p-4 rounded-lg bg-muted/50 space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    Send your {selectedCrypto.toUpperCase()} to this address:
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 p-2 bg-background rounded text-xs break-all">
-                      {depositAddress}
-                    </code>
-                    <Button variant="outline" size="icon" onClick={copyAddress}>
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Note: Payment will be processed via NOWPayments. Deposits are credited after network confirmation.
-                  </p>
+                <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                  <p className="text-sm font-medium">How it works:</p>
+                  <ol className="text-sm text-muted-foreground list-decimal list-inside space-y-1">
+                    <li>Enter the USD amount you want to deposit</li>
+                    <li>Click "Generate Payment" to create an invoice</li>
+                    <li>Pay the exact crypto amount shown</li>
+                    <li>Your balance will be credited after confirmation</li>
+                  </ol>
                 </div>
 
                 <Button className="w-full" onClick={handleDeposit} disabled={isProcessing}>
@@ -218,7 +268,7 @@ const Wallet = () => {
                     onChange={(e) => setWithdrawAmount(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Available: ${user?.balance?.toLocaleString() || "0.00"}
+                    Available: ${(user?.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
 
@@ -245,13 +295,65 @@ const Wallet = () => {
 
         {/* Recent deposits */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Recent Deposits</CardTitle>
+            <Button variant="ghost" size="sm" onClick={refetch}>
+              <RefreshCw className="h-4 w-4" />
+            </Button>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8 text-muted-foreground">
-              No deposits yet
-            </div>
+            {isLoading ? (
+              <div className="text-center py-8 text-muted-foreground">Loading...</div>
+            ) : deposits.length > 0 ? (
+              <div className="space-y-4">
+                {deposits.map((deposit) => (
+                  <div
+                    key={deposit.id}
+                    className="flex items-center justify-between p-4 rounded-lg border border-border"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">${Number(deposit.amount_usd).toLocaleString()} USD</span>
+                        {getStatusBadge(deposit.status)}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {deposit.crypto_currency.toUpperCase()}
+                        {deposit.crypto_amount && ` • ${deposit.crypto_amount}`}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(deposit.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {(deposit.status === "waiting" || deposit.status === "confirming") && deposit.invoice_url && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(deposit.invoice_url!, "_blank")}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          Pay
+                        </Button>
+                      )}
+                      {(deposit.status === "waiting" || deposit.status === "confirming") && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => checkDepositStatus(deposit.id)}
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No deposits yet</p>
+                <p className="text-sm">Make your first deposit to get started</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
