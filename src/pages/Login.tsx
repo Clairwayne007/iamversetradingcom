@@ -8,13 +8,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  const [isSendingReset, setIsSendingReset] = useState(false);
   
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -29,9 +40,7 @@ const Login = () => {
       
       if (result.success) {
         toast({ title: "Welcome back!", description: "Login successful" });
-        // Navigate based on user role
-        const user = JSON.parse(localStorage.getItem("iamverse-user") || "{}");
-        navigate(user.role === "admin" ? "/admin" : "/dashboard");
+        navigate("/dashboard");
       } else {
         toast({ title: "Error", description: result.error, variant: "destructive" });
       }
@@ -39,6 +48,38 @@ const Login = () => {
       toast({ title: "Error", description: "Something went wrong", variant: "destructive" });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!forgotPasswordEmail.trim()) {
+      toast({ title: "Error", description: "Please enter your email address", variant: "destructive" });
+      return;
+    }
+
+    setIsSendingReset(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail, {
+        redirectTo: `${window.location.origin}/login`,
+      });
+
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      } else {
+        toast({ 
+          title: "Email Sent!", 
+          description: "Check your email for the password reset link" 
+        });
+        setShowForgotPassword(false);
+        setForgotPasswordEmail("");
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to send reset email", variant: "destructive" });
+    } finally {
+      setIsSendingReset(false);
     }
   };
 
@@ -72,7 +113,16 @@ const Login = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
                 <div className="relative">
                   <Input
                     id="password"
@@ -110,15 +160,54 @@ const Login = () => {
                 Register
               </Link>
             </div>
-
-            <div className="mt-4 p-4 bg-muted rounded-lg text-xs text-muted-foreground">
-              <p className="font-medium mb-1">Demo Accounts:</p>
-              <p>Admin: admin@iamverse.com / admin123</p>
-              <p>Investor: investor@iamverse.com / investor123</p>
-            </div>
           </CardContent>
         </Card>
       </main>
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+            <DialogDescription>
+              Enter your email address and we'll send you a link to reset your password.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleForgotPassword} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="reset-email">Email</Label>
+              <Input
+                id="reset-email"
+                type="email"
+                placeholder="Enter your email"
+                value={forgotPasswordEmail}
+                onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowForgotPassword(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" className="flex-1" disabled={isSendingReset}>
+                {isSendingReset ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  "Send Reset Link"
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
