@@ -177,13 +177,21 @@ const Investments = () => {
                       </li>
                     ))}
                   </ul>
-                  <Button
-                    className="w-full"
-                    onClick={() => setSelectedPlan(plan)}
-                    disabled={(user?.balance || 0) <= 0}
-                  >
-                    {(user?.balance || 0) <= 0 ? "Deposit First" : "Invest Now"}
-                  </Button>
+                  {(user?.balance || 0) <= 0 ? (
+                    <Button
+                      className="w-full"
+                      onClick={() => window.location.href = "/dashboard/wallet"}
+                    >
+                      Deposit First
+                    </Button>
+                  ) : (
+                    <Button
+                      className="w-full"
+                      onClick={() => setSelectedPlan(plan)}
+                    >
+                      Invest Now
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             ))}
