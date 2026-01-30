@@ -50,6 +50,15 @@ export const investmentPlans: InvestmentPlan[] = [
     durationDays: 10,
     features: ["40% ROI Daily", "Dedicated Manager", "Exclusive Access"],
   },
+  {
+    id: "plan-elite",
+    name: "Bitcoin Elite Group",
+    amount: 50000,
+    roi: 45,
+    duration: "1 Week 3 Days",
+    durationDays: 10,
+    features: ["45% ROI Daily", "Elite VIP Support", "Priority Withdrawals"],
+  },
 ];
 
 export const InvestmentPlans = () => {

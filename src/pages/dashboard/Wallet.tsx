@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDeposits } from "@/hooks/useDeposits";
 import { useToast } from "@/hooks/use-toast";
-import { Wallet as WalletIcon, ArrowUpRight, ArrowDownRight, ExternalLink, RefreshCw, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Wallet as WalletIcon, ArrowUpRight, ArrowDownRight, ExternalLink, RefreshCw, Clock, CheckCircle, XCircle, AlertCircle, CreditCard, Building2, Bitcoin } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -27,6 +27,8 @@ const cryptoOptions = [
   { id: "doge", name: "Dogecoin (DOGE)" },
 ];
 
+type DepositMethod = "crypto" | "card" | "bank";
+
 const Wallet = () => {
   const { user, refreshProfile } = useAuth();
   const { deposits, createDeposit, checkDepositStatus, isLoading, refetch } = useDeposits();
@@ -37,6 +39,13 @@ const Wallet = () => {
   const [selectedCrypto, setSelectedCrypto] = useState("btc");
   const [isProcessing, setIsProcessing] = useState(false);
   const [pendingInvoiceUrl, setPendingInvoiceUrl] = useState<string | null>(null);
+  const [depositMethod, setDepositMethod] = useState<DepositMethod>("crypto");
+  
+  // Card payment fields
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvv, setCardCvv] = useState("");
+  const [cardName, setCardName] = useState("");
 
   // Poll for pending deposit status updates
   useEffect(() => {
@@ -89,6 +98,60 @@ const Wallet = () => {
     }
     
     setIsProcessing(false);
+  };
+
+  const handleCardDeposit = async () => {
+    const amount = parseFloat(depositAmount);
+    if (!depositAmount || amount <= 0) {
+      toast({ title: "Error", description: "Please enter a valid amount", variant: "destructive" });
+      return;
+    }
+
+    if (amount < 50) {
+      toast({ title: "Error", description: "Minimum card deposit is $50", variant: "destructive" });
+      return;
+    }
+
+    if (!cardNumber || !cardExpiry || !cardCvv || !cardName) {
+      toast({ title: "Error", description: "Please fill in all card details", variant: "destructive" });
+      return;
+    }
+
+    setIsProcessing(true);
+    
+    // Simulate card payment processing
+    toast({
+      title: "Processing Payment",
+      description: "Please wait while we process your card payment...",
+    });
+
+    // TODO: Integrate with Stripe or payment gateway
+    setTimeout(() => {
+      toast({
+        title: "Card Payment",
+        description: "Card payments will be available soon. Please use cryptocurrency for now.",
+        variant: "destructive",
+      });
+      setIsProcessing(false);
+    }, 2000);
+  };
+
+  const handleBankDeposit = async () => {
+    const amount = parseFloat(depositAmount);
+    if (!depositAmount || amount <= 0) {
+      toast({ title: "Error", description: "Please enter a valid amount", variant: "destructive" });
+      return;
+    }
+
+    if (amount < 100) {
+      toast({ title: "Error", description: "Minimum bank transfer is $100", variant: "destructive" });
+      return;
+    }
+
+    toast({
+      title: "Bank Transfer Instructions",
+      description: "Please contact team@iamverse.com for bank transfer details.",
+    });
   };
 
   const handleWithdraw = async () => {
@@ -191,48 +254,197 @@ const Wallet = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Deposit Funds</CardTitle>
+                <CardDescription>Choose your preferred payment method</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Select Cryptocurrency</Label>
-                  <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select crypto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {cryptoOptions.map((crypto) => (
-                        <SelectItem key={crypto.id} value={crypto.id}>
-                          {crypto.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <CardContent className="space-y-6">
+                {/* Payment method selection */}
+                <div className="grid grid-cols-3 gap-3">
+                  <Button
+                    variant={depositMethod === "crypto" ? "default" : "outline"}
+                    className="flex flex-col h-auto py-4 gap-2"
+                    onClick={() => setDepositMethod("crypto")}
+                  >
+                    <Bitcoin className="h-6 w-6" />
+                    <span className="text-xs">Crypto</span>
+                  </Button>
+                  <Button
+                    variant={depositMethod === "card" ? "default" : "outline"}
+                    className="flex flex-col h-auto py-4 gap-2"
+                    onClick={() => setDepositMethod("card")}
+                  >
+                    <CreditCard className="h-6 w-6" />
+                    <span className="text-xs">Card</span>
+                  </Button>
+                  <Button
+                    variant={depositMethod === "bank" ? "default" : "outline"}
+                    className="flex flex-col h-auto py-4 gap-2"
+                    onClick={() => setDepositMethod("bank")}
+                  >
+                    <Building2 className="h-6 w-6" />
+                    <span className="text-xs">Bank</span>
+                  </Button>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Amount (USD)</Label>
-                  <Input
-                    type="number"
-                    placeholder="Enter amount (min $10)"
-                    value={depositAmount}
-                    onChange={(e) => setDepositAmount(e.target.value)}
-                    min="10"
-                  />
-                </div>
+                {/* Crypto deposit form */}
+                {depositMethod === "crypto" && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Select Cryptocurrency</Label>
+                      <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select crypto" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {cryptoOptions.map((crypto) => (
+                            <SelectItem key={crypto.id} value={crypto.id}>
+                              {crypto.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <div className="p-4 rounded-lg bg-muted/50 space-y-2">
-                  <p className="text-sm font-medium">How it works:</p>
-                  <ol className="text-sm text-muted-foreground list-decimal list-inside space-y-1">
-                    <li>Enter the USD amount you want to deposit</li>
-                    <li>Click "Generate Payment" to create an invoice</li>
-                    <li>Pay the exact crypto amount shown</li>
-                    <li>Your balance will be credited after confirmation</li>
-                  </ol>
-                </div>
+                    <div className="space-y-2">
+                      <Label>Amount (USD)</Label>
+                      <Input
+                        type="number"
+                        placeholder="Enter amount (min $10)"
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        min="10"
+                      />
+                    </div>
 
-                <Button className="w-full" onClick={handleDeposit} disabled={isProcessing}>
-                  {isProcessing ? "Processing..." : "Generate Payment"}
-                </Button>
+                    <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                      <p className="text-sm font-medium">How it works:</p>
+                      <ol className="text-sm text-muted-foreground list-decimal list-inside space-y-1">
+                        <li>Enter the USD amount you want to deposit</li>
+                        <li>Click "Generate Payment" to create an invoice</li>
+                        <li>Pay the exact crypto amount shown</li>
+                        <li>Your balance will be credited after confirmation</li>
+                      </ol>
+                    </div>
+
+                    <Button className="w-full" onClick={handleDeposit} disabled={isProcessing}>
+                      {isProcessing ? "Processing..." : "Generate Payment"}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Card deposit form */}
+                {depositMethod === "card" && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Amount (USD)</Label>
+                      <Input
+                        type="number"
+                        placeholder="Enter amount (min $50)"
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        min="50"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Cardholder Name</Label>
+                      <Input
+                        placeholder="John Doe"
+                        value={cardName}
+                        onChange={(e) => setCardName(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Card Number</Label>
+                      <Input
+                        placeholder="4242 4242 4242 4242"
+                        value={cardNumber}
+                        onChange={(e) => setCardNumber(e.target.value)}
+                        maxLength={19}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Expiry Date</Label>
+                        <Input
+                          placeholder="MM/YY"
+                          value={cardExpiry}
+                          onChange={(e) => setCardExpiry(e.target.value)}
+                          maxLength={5}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>CVV</Label>
+                        <Input
+                          placeholder="123"
+                          value={cardCvv}
+                          onChange={(e) => setCardCvv(e.target.value)}
+                          maxLength={4}
+                          type="password"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-2">
+                      <p className="text-sm font-medium text-primary">Coming Soon</p>
+                      <p className="text-sm text-muted-foreground">
+                        Card payments are being integrated. Please use cryptocurrency for now.
+                      </p>
+                    </div>
+
+                    <Button className="w-full" onClick={handleCardDeposit} disabled={isProcessing}>
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      {isProcessing ? "Processing..." : "Pay with Card"}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Bank transfer form */}
+                {depositMethod === "bank" && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Amount (USD)</Label>
+                      <Input
+                        type="number"
+                        placeholder="Enter amount (min $100)"
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        min="100"
+                      />
+                    </div>
+
+                    <div className="p-4 rounded-lg bg-muted/50 space-y-3">
+                      <p className="text-sm font-medium">Bank Transfer Details</p>
+                      <div className="text-sm space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Company:</span>
+                          <span className="font-medium">I A V Global Event Organizers LLC</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Location:</span>
+                          <span className="font-medium">Dubai, UAE</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Contact:</span>
+                          <span className="font-medium">team@iamverse.com</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-2">
+                      <p className="text-sm font-medium text-primary">Contact Required</p>
+                      <p className="text-sm text-muted-foreground">
+                        For bank transfers, please contact us at team@iamverse.com with your deposit amount. We will provide you with the bank details and reference number.
+                      </p>
+                    </div>
+
+                    <Button className="w-full" onClick={handleBankDeposit} disabled={isProcessing}>
+                      <Building2 className="h-4 w-4 mr-2" />
+                      Request Bank Details
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
