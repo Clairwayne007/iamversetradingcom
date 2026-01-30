@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { TrendingUp, TrendingDown, Activity, RefreshCw, Loader2 } from "lucide-react";
 import { useMarketData, useChartData, formatVolume, formatPrice, Timeframe } from "@/hooks/useMarketData";
+import { useInvestments } from "@/hooks/useInvestments";
+import { PriceAlerts, PriceAlert } from "@/components/dashboard/PriceAlerts";
+import { InvestmentTracker } from "@/components/dashboard/InvestmentTracker";
 import {
   Select,
   SelectContent,
@@ -13,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 const AVAILABLE_SYMBOLS = [
   { id: "btc", name: "Bitcoin", symbol: "BTC" },
@@ -34,11 +38,53 @@ const TIMEFRAMES: { value: Timeframe; label: string }[] = [
 ];
 
 const Trading = () => {
+  const { toast } = useToast();
   const [selectedSymbol, setSelectedSymbol] = useState("btc");
   const [timeframe, setTimeframe] = useState<Timeframe>("24h");
+  const [priceAlerts, setPriceAlerts] = useState<PriceAlert[]>(() => {
+    const saved = localStorage.getItem("priceAlerts");
+    return saved ? JSON.parse(saved).map((a: PriceAlert) => ({ ...a, createdAt: new Date(a.createdAt) })) : [];
+  });
   
   const { prices, isLoading: pricesLoading, refetch: refetchPrices } = useMarketData();
   const { chartData, isLoading: chartLoading, refetch: refetchChart } = useChartData(selectedSymbol, timeframe);
+  const { investments, totalInvested, totalEarned } = useInvestments();
+
+  // Save alerts to localStorage
+  useEffect(() => {
+    localStorage.setItem("priceAlerts", JSON.stringify(priceAlerts));
+  }, [priceAlerts]);
+
+  // Check price alerts
+  useEffect(() => {
+    if (prices.length === 0) return;
+    
+    priceAlerts.forEach((alert) => {
+      if (alert.triggered) return;
+      
+      const coin = prices.find(
+        (p) => p.symbol.toLowerCase() === alert.symbol.toLowerCase() || 
+               p.id.toLowerCase() === alert.symbol.toLowerCase()
+      );
+      
+      if (!coin) return;
+      
+      const isTriggered = 
+        (alert.condition === "above" && coin.current_price >= alert.targetPrice) ||
+        (alert.condition === "below" && coin.current_price <= alert.targetPrice);
+      
+      if (isTriggered) {
+        toast({
+          title: "🔔 Price Alert Triggered!",
+          description: `${alert.symbol.toUpperCase()} is now ${alert.condition} ${formatPrice(alert.targetPrice)}`,
+        });
+        
+        setPriceAlerts((prev) =>
+          prev.map((a) => (a.id === alert.id ? { ...a, triggered: true } : a))
+        );
+      }
+    });
+  }, [prices, priceAlerts, toast]);
 
   const selectedCoin = prices.find(
     (p) => p.symbol.toLowerCase() === selectedSymbol.toLowerCase() || 
@@ -49,6 +95,26 @@ const Trading = () => {
     refetchPrices();
     refetchChart();
   };
+
+  const handleAddAlert = (alert: Omit<PriceAlert, "id" | "createdAt">) => {
+    const newAlert: PriceAlert = {
+      ...alert,
+      id: crypto.randomUUID(),
+      createdAt: new Date(),
+    };
+    setPriceAlerts((prev) => [...prev, newAlert]);
+  };
+
+  const handleDeleteAlert = (id: string) => {
+    setPriceAlerts((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  // Build current prices map for alerts
+  const currentPricesMap: Record<string, number> = {};
+  prices.forEach((p) => {
+    currentPricesMap[p.symbol.toLowerCase()] = p.current_price;
+    currentPricesMap[p.id.toLowerCase()] = p.current_price;
+  });
 
   // Get top 4 coins for market cards
   const topCoins = prices.slice(0, 4);
@@ -285,6 +351,21 @@ const Trading = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Price Alerts */}
+        <PriceAlerts
+          alerts={priceAlerts}
+          onAddAlert={handleAddAlert}
+          onDeleteAlert={handleDeleteAlert}
+          currentPrices={currentPricesMap}
+        />
+
+        {/* Investment Tracker */}
+        <InvestmentTracker
+          investments={investments}
+          totalInvested={totalInvested}
+          totalEarned={totalEarned}
+        />
       </div>
     </DashboardLayout>
   );
