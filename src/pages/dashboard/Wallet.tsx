@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDeposits } from "@/hooks/useDeposits";
 import { useToast } from "@/hooks/use-toast";
-import { Wallet as WalletIcon, ArrowUpRight, ArrowDownRight, ExternalLink, RefreshCw, Clock, CheckCircle, XCircle, AlertCircle, CreditCard, Building2, Bitcoin } from "lucide-react";
+import { Wallet as WalletIcon, ArrowUpRight, ArrowDownRight, ExternalLink, RefreshCw, Clock, CheckCircle, XCircle, AlertCircle, CreditCard, Bitcoin } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -27,7 +27,7 @@ const cryptoOptions = [
   { id: "doge", name: "Dogecoin (DOGE)" },
 ];
 
-type DepositMethod = "crypto" | "card" | "bank";
+type DepositMethod = "crypto" | "card";
 
 const Wallet = () => {
   const { user, refreshProfile } = useAuth();
@@ -136,23 +136,6 @@ const Wallet = () => {
     }, 2000);
   };
 
-  const handleBankDeposit = async () => {
-    const amount = parseFloat(depositAmount);
-    if (!depositAmount || amount <= 0) {
-      toast({ title: "Error", description: "Please enter a valid amount", variant: "destructive" });
-      return;
-    }
-
-    if (amount < 100) {
-      toast({ title: "Error", description: "Minimum bank transfer is $100", variant: "destructive" });
-      return;
-    }
-
-    toast({
-      title: "Bank Transfer Instructions",
-      description: "Please contact team@iamverse.com for bank transfer details.",
-    });
-  };
 
   const handleWithdraw = async () => {
     if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) {
@@ -258,7 +241,7 @@ const Wallet = () => {
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Payment method selection */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <Button
                     variant={depositMethod === "crypto" ? "default" : "outline"}
                     className="flex flex-col h-auto py-4 gap-2"
@@ -274,14 +257,6 @@ const Wallet = () => {
                   >
                     <CreditCard className="h-6 w-6" />
                     <span className="text-xs">Card</span>
-                  </Button>
-                  <Button
-                    variant={depositMethod === "bank" ? "default" : "outline"}
-                    className="flex flex-col h-auto py-4 gap-2"
-                    onClick={() => setDepositMethod("bank")}
-                  >
-                    <Building2 className="h-6 w-6" />
-                    <span className="text-xs">Bank</span>
                   </Button>
                 </div>
 
@@ -400,51 +375,6 @@ const Wallet = () => {
                   </div>
                 )}
 
-                {/* Bank transfer form */}
-                {depositMethod === "bank" && (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Amount (USD)</Label>
-                      <Input
-                        type="number"
-                        placeholder="Enter amount (min $100)"
-                        value={depositAmount}
-                        onChange={(e) => setDepositAmount(e.target.value)}
-                        min="100"
-                      />
-                    </div>
-
-                    <div className="p-4 rounded-lg bg-muted/50 space-y-3">
-                      <p className="text-sm font-medium">Bank Transfer Details</p>
-                      <div className="text-sm space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Company:</span>
-                          <span className="font-medium">I A V Global Event Organizers LLC</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Location:</span>
-                          <span className="font-medium">Dubai, UAE</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Contact:</span>
-                          <span className="font-medium">team@iamverse.com</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-2">
-                      <p className="text-sm font-medium text-primary">Contact Required</p>
-                      <p className="text-sm text-muted-foreground">
-                        For bank transfers, please contact us at team@iamverse.com with your deposit amount. We will provide you with the bank details and reference number.
-                      </p>
-                    </div>
-
-                    <Button className="w-full" onClick={handleBankDeposit} disabled={isProcessing}>
-                      <Building2 className="h-4 w-4 mr-2" />
-                      Request Bank Details
-                    </Button>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </TabsContent>
