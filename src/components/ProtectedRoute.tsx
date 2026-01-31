@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles?: ("investor" | "admin")[];
+  allowedRoles?: ("admin" | "moderator" | "user")[];
 }
 
 export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
@@ -29,7 +29,8 @@ export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) 
   }
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    return <Navigate to={user.role === "admin" ? "/admin" : "/dashboard"} replace />;
+    const isAdminOrMod = user.role === "admin" || user.role === "moderator";
+    return <Navigate to={isAdminOrMod ? "/admin" : "/dashboard"} replace />;
   }
 
   return <>{children}</>;
