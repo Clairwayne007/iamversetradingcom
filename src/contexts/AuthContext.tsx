@@ -2,11 +2,13 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { supabase } from "@/integrations/supabase/client";
 import { User as SupabaseUser, Session } from "@supabase/supabase-js";
 
+export type AppRole = "admin" | "moderator" | "user";
+
 export interface User {
   id: string;
   email: string;
   name: string;
-  role: "investor" | "admin";
+  role: AppRole;
   balance: number;
   createdAt: string;
 }
@@ -31,23 +33,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchProfile = async (supabaseUser: SupabaseUser): Promise<User | null> => {
-    const { data: profile, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", supabaseUser.id)
-      .maybeSingle();
+    // Fetch profile and role in parallel
+    const [profileResult, roleResult] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", supabaseUser.id)
+        .maybeSingle(),
+      supabase.rpc("get_user_role", { _user_id: supabaseUser.id })
+    ]);
 
-    if (error) {
-      console.error("Error fetching profile:", error);
+    if (profileResult.error) {
+      console.error("Error fetching profile:", profileResult.error);
       return null;
     }
+
+    const profile = profileResult.data;
+    const userRole: AppRole = roleResult.data || "user";
 
     if (profile) {
       return {
         id: profile.id,
         email: profile.email,
         name: profile.name,
-        role: "investor", // Default role, can be extended with roles table
+        role: userRole,
         balance: Number(profile.balance) || 0,
         createdAt: profile.created_at,
       };
