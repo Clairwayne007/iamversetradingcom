@@ -6,6 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Camera, RotateCcw, Check, X, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -168,6 +169,9 @@ export const CameraCapture = ({ open, onOpenChange, onAvatarUpdated }: CameraCap
             <Camera className="h-5 w-5" />
             Take Profile Photo
           </DialogTitle>
+          <DialogDescription>
+            Use your camera to take a profile photo. Make sure to allow camera access when prompted by your browser.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-muted">
