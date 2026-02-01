@@ -28,8 +28,9 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, MoreHorizontal, Shield, ShieldCheck, Crown, Loader2 } from "lucide-react";
+import { Search, MoreHorizontal, Shield, ShieldCheck, Crown, Loader2, Eye } from "lucide-react";
 import type { AppRole } from "@/contexts/AuthContext";
+import { UserDetailsModal } from "@/components/admin/UserDetailsModal";
 
 interface UserWithRole {
   id: string;
@@ -38,6 +39,7 @@ interface UserWithRole {
   balance: number;
   role: AppRole;
   createdAt: string;
+  avatar_url?: string;
 }
 
 const UserManagement = () => {
@@ -46,6 +48,7 @@ const UserManagement = () => {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
   const [newRole, setNewRole] = useState<AppRole>("user");
   const [updating, setUpdating] = useState(false);
@@ -238,6 +241,17 @@ const UserManagement = () => {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
                               className="gap-2"
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setDetailsModalOpen(true);
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="gap-2"
                               disabled={user.role === "admin"}
                               onClick={() => openRoleDialog(user, "admin")}
                             >
@@ -311,6 +325,13 @@ const UserManagement = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* User Details Modal */}
+      <UserDetailsModal
+        user={selectedUser}
+        open={detailsModalOpen}
+        onOpenChange={setDetailsModalOpen}
+      />
     </AdminLayout>
   );
 };

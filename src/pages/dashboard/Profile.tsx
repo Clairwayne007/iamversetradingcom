@@ -1,17 +1,40 @@
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInvestments } from "@/hooks/useInvestments";
 import { useDeposits } from "@/hooks/useDeposits";
-import { User, Mail, Calendar, Shield } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { User, Mail, Calendar, Shield, Camera } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CameraCapture } from "@/components/profile/CameraCapture";
 
 const Profile = () => {
   const { user, isLoading: authLoading } = useAuth();
   const { totalInvested, totalEarned, activeInvestments, isLoading: investmentsLoading } = useInvestments();
   const { deposits, isLoading: depositsLoading } = useDeposits();
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const isLoading = authLoading || investmentsLoading || depositsLoading;
+
+  // Fetch avatar URL
+  useEffect(() => {
+    if (user?.id) {
+      supabase
+        .from("profiles")
+        .select("avatar_url")
+        .eq("id", user.id)
+        .single()
+        .then(({ data }) => {
+          if (data?.avatar_url) {
+            setAvatarUrl(data.avatar_url);
+          }
+        });
+    }
+  }, [user?.id]);
 
   // Calculate real stats
   const confirmedDeposits = deposits.filter((d) => d.status === "confirmed");
@@ -38,14 +61,34 @@ const Profile = () => {
             ) : (
               <>
                 <div className="flex items-center gap-4">
-                  <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-2xl font-bold text-primary">
-                      {user?.name?.charAt(0).toUpperCase() || "?"}
-                    </span>
+                  <div className="relative group">
+                    <Avatar className="h-20 w-20">
+                      <AvatarImage src={avatarUrl || undefined} alt={user?.name} />
+                      <AvatarFallback className="bg-primary/10 text-primary text-2xl">
+                        {user?.name?.charAt(0).toUpperCase() || "?"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <Button
+                      size="icon"
+                      variant="secondary"
+                      className="absolute bottom-0 right-0 h-8 w-8 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => setCameraOpen(true)}
+                    >
+                      <Camera className="h-4 w-4" />
+                    </Button>
                   </div>
                   <div>
                     <h3 className="text-xl font-semibold">{user?.name || "User"}</h3>
                     <p className="text-muted-foreground capitalize">{user?.role || "Investor"} Account</p>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="p-0 h-auto text-primary"
+                      onClick={() => setCameraOpen(true)}
+                    >
+                      <Camera className="h-3 w-3 mr-1" />
+                      Take a selfie
+                    </Button>
                   </div>
                 </div>
 
@@ -111,6 +154,13 @@ const Profile = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Camera Capture Modal */}
+      <CameraCapture
+        open={cameraOpen}
+        onOpenChange={setCameraOpen}
+        onAvatarUpdated={(url) => setAvatarUrl(url)}
+      />
     </DashboardLayout>
   );
 };
