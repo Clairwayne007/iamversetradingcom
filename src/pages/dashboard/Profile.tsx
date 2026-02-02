@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Mail, Calendar, Shield, Camera } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CameraCapture } from "@/components/profile/CameraCapture";
+import { ProfileDetailsForm } from "@/components/profile/ProfileDetailsForm";
 
 const Profile = () => {
   const { user, isLoading: authLoading } = useAuth();
@@ -112,6 +113,19 @@ const Profile = () => {
                 </div>
               </>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Personal Details (optional) */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Personal Details</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Complete these optional details whenever you like — they won't affect deposits or investments.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <ProfileDetailsForm />
           </CardContent>
         </Card>
 
