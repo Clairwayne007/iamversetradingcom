@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -31,37 +31,74 @@ export const CameraCapture = ({ open, onOpenChange, onAvatarUpdated }: CameraCap
   const [uploading, setUploading] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
 
-  const startCamera = useCallback(async () => {
-    setCameraError(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: 640, height: 480 },
-        audio: false,
-      });
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-        setCameraActive(true);
-      }
-    } catch (error) {
-      console.error("Camera error:", error);
-      setCameraError("Unable to access camera. Please check permissions.");
-      toast({
-        title: "Camera Error",
-        description: "Unable to access camera. Please check your permissions.",
-        variant: "destructive",
-      });
-    }
-  }, [toast]);
-
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
     setCameraActive(false);
   }, []);
+
+  const startCamera = useCallback(async () => {
+    setCameraError(null);
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      const msg = "Camera is not supported in this browser/environment.";
+      setCameraError(msg);
+      toast({
+        title: "Camera Unsupported",
+        description: msg,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Ensure any previous stream is stopped before starting again
+      stopCamera();
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: 640, height: 480 },
+        audio: false,
+      });
+
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(() => {
+          // Ignore autoplay/play errors; the stream may still attach.
+        });
+      }
+
+      setCameraActive(true);
+    } catch (error: any) {
+      console.error("Camera error:", error);
+
+      const name = error?.name as string | undefined;
+      const msg =
+        name === "NotAllowedError"
+          ? "Camera permission was blocked. Allow camera access in your browser, then try again."
+          : name === "NotFoundError"
+            ? "No camera was found on this device."
+            : name === "NotReadableError"
+              ? "Camera is already in use by another app (Zoom/Meet/etc.). Close it and try again."
+              : name === "SecurityError"
+                ? "Camera access is blocked by the browser security policy. If you’re using an embedded preview, try opening the app in a new tab."
+                : "Unable to access camera. Please check permissions.";
+
+      setCameraError(msg);
+      toast({
+        title: "Camera Error",
+        description: msg,
+        variant: "destructive",
+      });
+      stopCamera();
+    }
+  }, [stopCamera, toast]);
 
   const capturePhoto = useCallback(() => {
     if (videoRef.current && canvasRef.current) {
@@ -131,7 +168,7 @@ export const CameraCapture = ({ open, onOpenChange, onAvatarUpdated }: CameraCap
       });
 
       onAvatarUpdated(publicUrl);
-      handleClose();
+      onOpenChange(false);
     } catch (error) {
       console.error("Upload error:", error);
       toast({
@@ -144,22 +181,29 @@ export const CameraCapture = ({ open, onOpenChange, onAvatarUpdated }: CameraCap
     }
   };
 
-  const handleClose = () => {
-    stopCamera();
-    setCapturedImage(null);
-    setCameraError(null);
-    onOpenChange(false);
-  };
-
-  // Start camera when dialog opens
+  // Radix calls this whenever the user closes via ESC / overlay click / close button
   const handleOpenChange = (isOpen: boolean) => {
-    if (isOpen) {
-      startCamera();
-    } else {
-      handleClose();
-    }
     onOpenChange(isOpen);
   };
+
+  // Start/stop camera only AFTER the dialog has mounted (prevents "loading forever")
+  useEffect(() => {
+    if (!open) {
+      stopCamera();
+      setCapturedImage(null);
+      setCameraError(null);
+      return;
+    }
+
+    const t = window.setTimeout(() => {
+      startCamera();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(t);
+      stopCamera();
+    };
+  }, [open, startCamera, stopCamera]);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -248,7 +292,7 @@ export const CameraCapture = ({ open, onOpenChange, onAvatarUpdated }: CameraCap
             <>
               <Button
                 variant="outline"
-                onClick={handleClose}
+                onClick={() => onOpenChange(false)}
                 className="w-full sm:w-auto"
               >
                 <X className="h-4 w-4 mr-2" />
