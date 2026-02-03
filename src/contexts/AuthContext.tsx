@@ -19,7 +19,11 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
+  register: (
+    email: string,
+    password: string,
+    name: string
+  ) => Promise<{ success: boolean; needsEmailConfirmation?: boolean; error?: string }>;
   logout: () => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
   refreshProfile: () => Promise<void>;
@@ -125,8 +129,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { success: true };
   };
 
-  const register = async (email: string, password: string, name: string): Promise<{ success: boolean; error?: string }> => {
-    const { error } = await supabase.auth.signUp({
+  const register = async (
+    email: string,
+    password: string,
+    name: string
+  ): Promise<{ success: boolean; needsEmailConfirmation?: boolean; error?: string }> => {
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -139,7 +147,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return { success: false, error: error.message };
     }
 
-    return { success: true };
+    // When email confirmation is required, Supabase returns `session: null`.
+    const needsEmailConfirmation = !data.session;
+    return { success: true, needsEmailConfirmation };
   };
 
   const logout = async () => {

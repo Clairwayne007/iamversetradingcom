@@ -69,6 +69,19 @@ const handler = async (req: Request): Promise<Response> => {
     const data = await response.json();
     
     if (!response.ok) {
+      // If the Resend account/domain isn't verified, Resend blocks sending to non-owner recipients.
+      // Treat this as a non-fatal "skipped" state so the client doesn't surface a 500/blank-screen.
+      if (response.status === 403 && data?.name === "validation_error") {
+        console.log("Resend send blocked (likely unverified domain):", data);
+        return new Response(
+          JSON.stringify({ success: false, skipped: true, reason: "RESEND_VALIDATION_ERROR", data }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      }
+
       throw new Error(`Resend API error: ${JSON.stringify(data)}`);
     }
 
