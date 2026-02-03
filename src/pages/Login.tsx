@@ -70,13 +70,18 @@ const Login = () => {
       if (error) {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       } else {
-        // Also send via Resend for better delivery
-        const resetUrl = `${window.location.origin}/reset-password`;
-        await supabase.functions.invoke("send-password-reset", {
-          body: { email: forgotPasswordEmail, resetUrl },
-        });
+        // Try to send via Resend for better delivery (non-blocking)
+        try {
+          const resetUrl = `${window.location.origin}/reset-password`;
+          await supabase.functions.invoke("send-password-reset", {
+            body: { email: forgotPasswordEmail, resetUrl },
+          });
+        } catch (resendError) {
+          // Resend may fail if domain not verified - Supabase email is the primary
+          console.log("Resend backup email not sent:", resendError);
+        }
         
-        toast({ 
+        toast({
           title: "Email Sent!", 
           description: "Check your email for the password reset link" 
         });
