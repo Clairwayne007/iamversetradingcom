@@ -71,14 +71,14 @@ const Login = () => {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       } else {
         // Try to send via Resend for better delivery (non-blocking)
-        try {
-          const resetUrl = `${window.location.origin}/reset-password`;
-          await supabase.functions.invoke("send-password-reset", {
-            body: { email: forgotPasswordEmail, resetUrl },
-          });
-        } catch (resendError) {
-          // Resend may fail if domain not verified - Supabase email is the primary
-          console.log("Resend backup email not sent:", resendError);
+        // Note: supabase.functions.invoke doesn't throw on HTTP errors
+        const resetUrl = `${window.location.origin}/reset-password`;
+        const { error: resendError } = await supabase.functions.invoke("send-password-reset", {
+          body: { email: forgotPasswordEmail, resetUrl },
+        });
+        if (resendError) {
+          // Resend may fail if domain not verified - Supabase email is the primary fallback
+          console.log("Resend backup email not sent:", resendError.message);
         }
         
         toast({
