@@ -41,8 +41,16 @@ const Register = () => {
       const result = await register(email, password, name);
       
       if (result.success) {
-        toast({ title: "Welcome!", description: "Account created successfully" });
-        navigate("/dashboard");
+        if (result.needsEmailConfirmation) {
+          toast({
+            title: "Confirm your email",
+            description: "We sent you a confirmation link. Please check your inbox to activate your account.",
+          });
+          navigate("/login");
+        } else {
+          toast({ title: "Welcome!", description: "Account created successfully" });
+          navigate("/dashboard");
+        }
       } else {
         toast({ title: "Error", description: result.error, variant: "destructive" });
       }

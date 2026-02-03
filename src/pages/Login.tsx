@@ -70,17 +70,7 @@ const Login = () => {
       if (error) {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       } else {
-        // Try to send via Resend for better delivery (non-blocking)
-        // Note: supabase.functions.invoke doesn't throw on HTTP errors
-        const resetUrl = `${window.location.origin}/reset-password`;
-        const { error: resendError } = await supabase.functions.invoke("send-password-reset", {
-          body: { email: forgotPasswordEmail, resetUrl },
-        });
-        if (resendError) {
-          // Resend may fail if domain not verified - Supabase email is the primary fallback
-          console.log("Resend backup email not sent:", resendError.message);
-        }
-        
+        // Use built-in auth email delivery (Resend disabled for now)
         toast({
           title: "Email Sent!", 
           description: "Check your email for the password reset link" 
