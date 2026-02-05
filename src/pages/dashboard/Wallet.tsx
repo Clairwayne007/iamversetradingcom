@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDeposits } from "@/hooks/useDeposits";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { Wallet as WalletIcon, ArrowUpRight, ArrowDownRight, ExternalLink, RefreshCw, Clock, CheckCircle, XCircle, AlertCircle, CreditCard, Bitcoin } from "lucide-react";
 import {
   Select,
@@ -138,32 +139,61 @@ const Wallet = () => {
 
 
   const handleWithdraw = async () => {
-    if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) {
+    const amount = parseFloat(withdrawAmount);
+    
+    if (!withdrawAmount || amount <= 0) {
       toast({ title: "Error", description: "Please enter a valid amount", variant: "destructive" });
       return;
     }
 
-    if (parseFloat(withdrawAmount) > (user?.balance || 0)) {
+    if (amount < 10) {
+      toast({ title: "Error", description: "Minimum withdrawal is $10", variant: "destructive" });
+      return;
+    }
+
+    if (amount > (user?.balance || 0)) {
       toast({ title: "Error", description: "Insufficient balance", variant: "destructive" });
       return;
     }
 
-    if (!withdrawAddress) {
+    if (!withdrawAddress.trim()) {
       toast({ title: "Error", description: "Please enter your wallet address", variant: "destructive" });
+      return;
+    }
+
+    // Basic wallet address validation
+    if (withdrawAddress.trim().length < 20) {
+      toast({ title: "Error", description: "Please enter a valid wallet address", variant: "destructive" });
       return;
     }
 
     setIsProcessing(true);
     
-    // TODO: Integrate with backend API for withdrawals
-    toast({
-      title: "Withdrawal Requested",
-      description: "Your withdrawal request is being processed. This feature will be available soon.",
-    });
-    
-    setWithdrawAmount("");
-    setWithdrawAddress("");
-    setIsProcessing(false);
+    try {
+      // Insert withdrawal request into database
+      const { error } = await supabase.from("withdrawals").insert({
+        user_id: user?.id,
+        amount_usd: amount,
+        crypto_currency: selectedCrypto,
+        wallet_address: withdrawAddress.trim(),
+        status: "pending",
+      });
+
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      } else {
+        toast({
+          title: "Withdrawal Requested",
+          description: "Your withdrawal request has been submitted and is pending approval.",
+        });
+        setWithdrawAmount("");
+        setWithdrawAddress("");
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to submit withdrawal request", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const getStatusBadge = (status: string) => {
