@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 const Register = () => {
@@ -42,16 +41,7 @@ const Register = () => {
       const result = await register(email, password, name);
       
       if (result.success) {
-        // Send welcome email (fire and forget - don't block navigation)
-        supabase.functions.invoke("send-welcome-email", {
-          body: { email, name },
-        }).then((res) => {
-          if (res.error) {
-            console.log("Welcome email could not be sent:", res.error);
-          }
-        });
-
-        toast({ title: "Welcome!", description: "Account created successfully. Check your email for a welcome message!" });
+        toast({ title: "Welcome!", description: "Account created successfully" });
         navigate("/dashboard");
       } else {
         toast({ title: "Error", description: result.error, variant: "destructive" });
