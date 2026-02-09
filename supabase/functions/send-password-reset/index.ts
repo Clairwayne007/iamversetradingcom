@@ -35,7 +35,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "IAMverse <onboarding@resend.dev>",
+        from: "IAMverse <noreply@iamversetrading.com>",
         to: [email],
         subject: "Reset Your Password - IAMverse",
         html: `
