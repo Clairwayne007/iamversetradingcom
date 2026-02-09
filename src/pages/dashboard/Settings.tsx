@@ -80,6 +80,11 @@ const Settings = () => {
       if (updateError) {
         toast({ title: "Error", description: updateError.message, variant: "destructive" });
       } else {
+        // Send password changed notification (fire-and-forget)
+        supabase.functions.invoke("send-password-changed-email", {
+          body: { email: user?.email, name: user?.name },
+        }).catch((err) => console.error("Password changed email failed:", err));
+
         toast({ title: "Success", description: "Password changed successfully" });
         setCurrentPassword("");
         setNewPassword("");
