@@ -2,3 +2,6 @@ project_id = "qectmyujyxmeqsbompra"
 
 [functions.nowpayments-webhook]
 verify_jwt = false
+
+[functions.expire-deposits]
+verify_jwt = false
