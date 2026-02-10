@@ -6,19 +6,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  User, 
-  TrendingUp, 
-  History, 
-  DollarSign, 
+import { useToast } from "@/hooks/use-toast";
+import {
+  TrendingUp,
+  History,
+  DollarSign,
   Calendar,
   ArrowUpRight,
-  ArrowDownRight 
+  ArrowDownRight,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 import type { AppRole } from "@/contexts/AuthContext";
 
@@ -60,10 +63,12 @@ interface UserDetailsModalProps {
 }
 
 export const UserDetailsModal = ({ user, open, onOpenChange }: UserDetailsModalProps) => {
+  const { toast } = useToast();
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [deletingAvatar, setDeletingAvatar] = useState(false);
 
   useEffect(() => {
     if (user && open) {
@@ -73,38 +78,20 @@ export const UserDetailsModal = ({ user, open, onOpenChange }: UserDetailsModalP
 
   const fetchUserDetails = async () => {
     if (!user) return;
-    
+
     setLoading(true);
     try {
-      // Fetch investments, deposits, withdrawals, and avatar in parallel
       const [investmentsResult, depositsResult, withdrawalsResult, profileResult] = await Promise.all([
-        supabase
-          .from("investments")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("deposits")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("withdrawals")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("profiles")
-          .select("avatar_url")
-          .eq("id", user.id)
-          .single()
+        supabase.from("investments").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("deposits").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("withdrawals").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("profiles").select("avatar_url").eq("id", user.id).single(),
       ]);
 
       if (investmentsResult.data) {
         setInvestments(investmentsResult.data as Investment[]);
       }
 
-      // Combine deposits and withdrawals into transactions
       const allTransactions: Transaction[] = [
         ...(depositsResult.data || []).map((d) => ({
           id: d.id,
@@ -133,6 +120,43 @@ export const UserDetailsModal = ({ user, open, onOpenChange }: UserDetailsModalP
     }
   };
 
+  const handleDeleteAvatar = async () => {
+    if (!user || !avatarUrl) return;
+
+    setDeletingAvatar(true);
+    try {
+      // Extract file path from the URL
+      const urlParts = avatarUrl.split("/avatars/");
+      const filePath = urlParts.length > 1 ? urlParts[1] : null;
+
+      if (filePath) {
+        const { error: storageError } = await supabase.storage
+          .from("avatars")
+          .remove([filePath]);
+
+        if (storageError) {
+          console.error("Storage delete error:", storageError);
+        }
+      }
+
+      // Clear avatar_url in profile
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: null })
+        .eq("id", user.id);
+
+      if (profileError) throw profileError;
+
+      setAvatarUrl(null);
+      toast({ title: "Avatar Deleted", description: `${user.name}'s avatar has been removed.` });
+    } catch (error) {
+      console.error("Error deleting avatar:", error);
+      toast({ title: "Error", description: "Failed to delete avatar", variant: "destructive" });
+    } finally {
+      setDeletingAvatar(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       active: "default",
@@ -142,6 +166,7 @@ export const UserDetailsModal = ({ user, open, onOpenChange }: UserDetailsModalP
       waiting: "outline",
       failed: "destructive",
       cancelled: "destructive",
+      expired: "destructive",
     };
     return <Badge variant={variants[status] || "outline"}>{status}</Badge>;
   };
@@ -162,12 +187,30 @@ export const UserDetailsModal = ({ user, open, onOpenChange }: UserDetailsModalP
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={avatarUrl || undefined} alt={user.name} />
-              <AvatarFallback className="bg-primary/10 text-primary text-lg">
-                {user.name.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="h-12 w-12">
+                <AvatarImage src={avatarUrl || undefined} alt={user.name} />
+                <AvatarFallback className="bg-primary/10 text-primary text-lg">
+                  {user.name.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              {avatarUrl && (
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full"
+                  onClick={handleDeleteAvatar}
+                  disabled={deletingAvatar}
+                  title="Delete avatar"
+                >
+                  {deletingAvatar ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3 w-3" />
+                  )}
+                </Button>
+              )}
+            </div>
             <div>
               <h2 className="text-xl font-semibold">{user.name}</h2>
               <p className="text-sm text-muted-foreground font-normal">{user.email}</p>
@@ -186,7 +229,6 @@ export const UserDetailsModal = ({ user, open, onOpenChange }: UserDetailsModalP
           </div>
         ) : (
           <>
-            {/* Stats Overview */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
               <Card>
                 <CardContent className="pt-4 pb-3">
@@ -226,7 +268,6 @@ export const UserDetailsModal = ({ user, open, onOpenChange }: UserDetailsModalP
               </Card>
             </div>
 
-            {/* Tabs for Investments and Transactions */}
             <Tabs defaultValue="investments" className="mt-4">
               <TabsList className="w-full">
                 <TabsTrigger value="investments" className="flex-1 gap-2">
@@ -241,9 +282,7 @@ export const UserDetailsModal = ({ user, open, onOpenChange }: UserDetailsModalP
 
               <TabsContent value="investments" className="mt-4">
                 {investments.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No investments found
-                  </div>
+                  <div className="text-center py-8 text-muted-foreground">No investments found</div>
                 ) : (
                   <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
                     {investments.map((inv) => (
@@ -282,9 +321,7 @@ export const UserDetailsModal = ({ user, open, onOpenChange }: UserDetailsModalP
 
               <TabsContent value="transactions" className="mt-4">
                 {transactions.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No transactions found
-                  </div>
+                  <div className="text-center py-8 text-muted-foreground">No transactions found</div>
                 ) : (
                   <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
                     {transactions.map((tx) => (
@@ -292,11 +329,7 @@ export const UserDetailsModal = ({ user, open, onOpenChange }: UserDetailsModalP
                         <CardContent className="py-3">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              <div className={`p-2 rounded-full ${
-                                tx.type === "deposit" 
-                                  ? "bg-success/10" 
-                                  : "bg-warning/10"
-                              }`}>
+                              <div className={`p-2 rounded-full ${tx.type === "deposit" ? "bg-success/10" : "bg-warning/10"}`}>
                                 {tx.type === "deposit" ? (
                                   <ArrowUpRight className="h-4 w-4 text-success" />
                                 ) : (
@@ -305,15 +338,11 @@ export const UserDetailsModal = ({ user, open, onOpenChange }: UserDetailsModalP
                               </div>
                               <div>
                                 <p className="font-medium capitalize">{tx.type}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {tx.crypto_currency}
-                                </p>
+                                <p className="text-sm text-muted-foreground">{tx.crypto_currency}</p>
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className={`font-bold ${
-                                tx.type === "deposit" ? "text-success" : "text-warning"
-                              }`}>
+                              <p className={`font-bold ${tx.type === "deposit" ? "text-success" : "text-warning"}`}>
                                 {tx.type === "deposit" ? "+" : "-"}${tx.amount_usd.toLocaleString()}
                               </p>
                               <div className="flex items-center gap-2 justify-end mt-1">

@@ -205,6 +205,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      expire_old_deposits: { Args: never; Returns: number }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
