@@ -31,13 +31,13 @@ const handler = async (req: Request): Promise<Response> => {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${resendApiKey}`,
+        Authorization: `Bearer ${resendApiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "IAMverse <noreply@iamversetrading.com>",
+        from: "Iamverse <noreply@iamversetrading.com>",
         to: [email],
-        subject: "Reset Your Password - IAMverse",
+        subject: "Reset Your Password - Iamverse",
         html: `
           <!DOCTYPE html>
           <html>
@@ -58,7 +58,7 @@ const handler = async (req: Request): Promise<Response> => {
               <p style="color: #666; font-size: 14px;">If you didn't request this, you can safely ignore this email.</p>
               <p style="color: #666; font-size: 14px;">This link will expire in 1 hour.</p>
               <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-              <p style="color: #999; font-size: 12px; text-align: center;">© 2026 IAMverse. All rights reserved.</p>
+              <p style="color: #999; font-size: 12px; text-align: center;">© 2022 Iamverse. All rights reserved.</p>
             </div>
           </body>
           </html>
@@ -67,18 +67,23 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     const data = await response.json();
-    
+
     if (!response.ok) {
       // If the Resend account/domain isn't verified, Resend blocks sending to non-owner recipients.
       // Treat this as a non-fatal "skipped" state so the client doesn't surface a 500/blank-screen.
       if (response.status === 403 && data?.name === "validation_error") {
         console.log("Resend send blocked (likely unverified domain):", data);
         return new Response(
-          JSON.stringify({ success: false, skipped: true, reason: "RESEND_VALIDATION_ERROR", data }),
+          JSON.stringify({
+            success: false,
+            skipped: true,
+            reason: "RESEND_VALIDATION_ERROR",
+            data,
+          }),
           {
             status: 200,
             headers: { "Content-Type": "application/json", ...corsHeaders },
-          }
+          },
         );
       }
 
@@ -93,10 +98,14 @@ const handler = async (req: Request): Promise<Response> => {
     });
   } catch (error: unknown) {
     console.error("Error in send-password-reset function:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     return new Response(
       JSON.stringify({ success: false, error: errorMessage }),
-      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      },
     );
   }
 };

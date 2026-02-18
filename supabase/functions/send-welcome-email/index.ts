@@ -33,13 +33,13 @@ const handler = async (req: Request): Promise<Response> => {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${resendApiKey}`,
+        Authorization: `Bearer ${resendApiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "IAMverse <noreply@iamversetrading.com>",
+        from: "Iamverse <noreply@iamversetrading.com>",
         to: [email],
-        subject: "Welcome to IAMverse! 🎉",
+        subject: "Welcome to Iamverse! 🎉",
         html: `
           <!DOCTYPE html>
           <html>
@@ -49,11 +49,11 @@ const handler = async (req: Request): Promise<Response> => {
           </head>
           <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-              <h1 style="color: white; margin: 0;">Welcome to IAMverse!</h1>
+              <h1 style="color: white; margin: 0;">Welcome to Iamverse!</h1>
             </div>
             <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-              <h2 style="color: #333;">Hi ${userName}! 👋</h2>
-              <p>Congratulations! Your account has been successfully created on IAMverse.</p>
+              <h2 style="color: #333;">Namaste ${userName}! 👋</h2>
+              <p>Congratulations! Your account has been successfully created on Iamverse.</p>
               <p>You're now part of our investment community. Here's what you can do:</p>
               <ul style="color: #555;">
                 <li>Explore our investment plans</li>
@@ -66,7 +66,7 @@ const handler = async (req: Request): Promise<Response> => {
               </div>
               <p style="color: #666; font-size: 14px;">If you have any questions, feel free to reach out to our support team.</p>
               <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-              <p style="color: #999; font-size: 12px; text-align: center;">© 2026 IAMverse. All rights reserved.</p>
+              <p style="color: #999; font-size: 12px; text-align: center;">© 2022 Iamverse. All rights reserved.</p>
             </div>
           </body>
           </html>
@@ -75,17 +75,22 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     const data = await response.json();
-    
+
     if (!response.ok) {
       // If Resend validation fails (unverified domain), log and return gracefully
       if (response.status === 403 && data?.name === "validation_error") {
         console.log("Resend send blocked (likely unverified domain):", data);
         return new Response(
-          JSON.stringify({ success: false, skipped: true, reason: "RESEND_VALIDATION_ERROR", data }),
+          JSON.stringify({
+            success: false,
+            skipped: true,
+            reason: "RESEND_VALIDATION_ERROR",
+            data,
+          }),
           {
             status: 200,
             headers: { "Content-Type": "application/json", ...corsHeaders },
-          }
+          },
         );
       }
 
@@ -100,10 +105,14 @@ const handler = async (req: Request): Promise<Response> => {
     });
   } catch (error: unknown) {
     console.error("Error in send-welcome-email function:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     return new Response(
       JSON.stringify({ success: false, error: errorMessage }),
-      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      },
     );
   }
 };
