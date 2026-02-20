@@ -53,7 +53,7 @@ const handler = async (req: Request): Promise<Response> => {
               <h1 style="color: white; margin: 0;">iamverse</h1>
             </div>
             <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-              <h2 style="color: #333;">Hi ${userName},</h2>
+              <h2 style="color: #333;">Namaste ${userName},</h2>
               <p>Your email address has been changed to <strong>${newEmail}</strong>.</p>
               <p>If you did not make this change, please contact our support team immediately.</p>
               <div style="text-align: center; margin: 30px 0;">
