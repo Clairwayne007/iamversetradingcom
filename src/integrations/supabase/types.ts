@@ -134,6 +134,33 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+          read: boolean | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+          read?: boolean | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+          read?: boolean | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           age: number | null
@@ -145,6 +172,8 @@ export type Database = {
           id: string
           name: string
           occupation: string | null
+          phone_number: string | null
+          phone_verified: boolean | null
           sex: string | null
           updated_at: string | null
         }
@@ -158,6 +187,8 @@ export type Database = {
           id: string
           name: string
           occupation?: string | null
+          phone_number?: string | null
+          phone_verified?: boolean | null
           sex?: string | null
           updated_at?: string | null
         }
@@ -171,6 +202,8 @@ export type Database = {
           id?: string
           name?: string
           occupation?: string | null
+          phone_number?: string | null
+          phone_verified?: boolean | null
           sex?: string | null
           updated_at?: string | null
         }
