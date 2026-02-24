@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,17 +20,28 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
-    if (!resendApiKey) {
-      throw new Error("RESEND_API_KEY is not configured");
-    }
+    if (!resendApiKey) throw new Error("RESEND_API_KEY is not configured");
 
     const { email, newEmail, name }: EmailChangeRequest = await req.json();
-
-    if (!email || !newEmail) {
-      throw new Error("Missing required fields: email and newEmail");
-    }
+    if (!email || !newEmail) throw new Error("Missing required fields: email and newEmail");
 
     const userName = name || "there";
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data: template } = await supabase
+      .from("email_templates")
+      .select("subject, html_content")
+      .eq("template_key", "email_changed")
+      .single();
+
+    const subject = template?.subject || "Email Address Changed - Iamverse";
+    let htmlContent = template?.html_content || `<p>Your email has been changed to ${newEmail}.</p>`;
+
+    htmlContent = htmlContent.replace(/\{\{name\}\}/g, userName);
+    htmlContent = htmlContent.replace(/\{\{newEmail\}\}/g, newEmail);
 
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -40,31 +52,8 @@ const handler = async (req: Request): Promise<Response> => {
       body: JSON.stringify({
         from: "Iamverse <noreply@iamversetrading.com>",
         to: [email],
-        subject: "Email Address Changed - Iamverse",
-        html: `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          </head>
-          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-              <h1 style="color: white; margin: 0;">iamverse</h1>
-            </div>
-            <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-              <h2 style="color: #333;">Namaste ${userName},</h2>
-              <p>Your email address has been changed to <strong>${newEmail}</strong>.</p>
-              <p>If you did not make this change, please contact our support team immediately.</p>
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="https://iamversetrading.com/login" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Go to Login</a>
-              </div>
-              <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-              <p style="color: #999; font-size: 12px; text-align: center;">© 2022 Iamverse. All rights reserved.</p>
-            </div>
-          </body>
-          </html>
-        `,
+        subject,
+        html: htmlContent,
       }),
     });
 
@@ -74,38 +63,25 @@ const handler = async (req: Request): Promise<Response> => {
       if (response.status === 403 && data?.name === "validation_error") {
         console.log("Resend send blocked (likely unverified domain):", data);
         return new Response(
-          JSON.stringify({
-            success: false,
-            skipped: true,
-            reason: "RESEND_VALIDATION_ERROR",
-            data,
-          }),
-          {
-            status: 200,
-            headers: { "Content-Type": "application/json", ...corsHeaders },
-          },
+          JSON.stringify({ success: false, skipped: true, reason: "RESEND_VALIDATION_ERROR", data }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
         );
       }
       throw new Error(`Resend API error: ${JSON.stringify(data)}`);
     }
 
     console.log("Email change notification sent successfully:", data);
-
     return new Response(JSON.stringify({ success: true, data }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (error: unknown) {
     console.error("Error in send-email-change-email function:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      },
-    );
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return new Response(JSON.stringify({ success: false, error: errorMessage }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   }
 };
 

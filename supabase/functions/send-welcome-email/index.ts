@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,12 +24,26 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const { email, name }: WelcomeEmailRequest = await req.json();
-
-    if (!email) {
-      throw new Error("Missing required field: email");
-    }
+    if (!email) throw new Error("Missing required field: email");
 
     const userName = name || "there";
+
+    // Fetch template from database
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data: template } = await supabase
+      .from("email_templates")
+      .select("subject, html_content")
+      .eq("template_key", "welcome")
+      .single();
+
+    const subject = template?.subject || "Welcome to Iamverse! 🎉";
+    let htmlContent = template?.html_content || `<p>Welcome ${userName}!</p>`;
+
+    // Replace placeholders
+    htmlContent = htmlContent.replace(/\{\{name\}\}/g, userName);
 
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -39,81 +54,36 @@ const handler = async (req: Request): Promise<Response> => {
       body: JSON.stringify({
         from: "Iamverse <noreply@iamversetrading.com>",
         to: [email],
-        subject: "Welcome to Iamverse! 🎉",
-        html: `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          </head>
-          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-              <h1 style="color: white; margin: 0;">Welcome to Iamverse!</h1>
-            </div>
-            <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-              <h2 style="color: #333;">Namaste ${userName}! 👋</h2>
-              <p>Congratulations! Your account has been successfully created on Iamverse.</p>
-              <p>You're now part of our investment community. Here's what you can do:</p>
-              <ul style="color: #555;">
-                <li>Explore our investment plans</li>
-                <li>Track your portfolio performance</li>
-                <li>Make secure deposits and withdrawals</li>
-                <li>Access real-time market data</li>
-              </ul>
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="https://iamversetrading.com/dashboard" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Go to Dashboard</a>
-              </div>
-              <p style="color: #666; font-size: 14px;">If you have any questions, feel free to reach out to our support team.</p>
-              <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-              <p style="color: #999; font-size: 12px; text-align: center;">© 2022 Iamverse. All rights reserved.</p>
-            </div>
-          </body>
-          </html>
-        `,
+        subject,
+        html: htmlContent,
       }),
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      // If Resend validation fails (unverified domain), log and return gracefully
       if (response.status === 403 && data?.name === "validation_error") {
         console.log("Resend send blocked (likely unverified domain):", data);
         return new Response(
-          JSON.stringify({
-            success: false,
-            skipped: true,
-            reason: "RESEND_VALIDATION_ERROR",
-            data,
-          }),
-          {
-            status: 200,
-            headers: { "Content-Type": "application/json", ...corsHeaders },
-          },
+          JSON.stringify({ success: false, skipped: true, reason: "RESEND_VALIDATION_ERROR", data }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
         );
       }
-
       throw new Error(`Resend API error: ${JSON.stringify(data)}`);
     }
 
     console.log("Welcome email sent successfully:", data);
-
     return new Response(JSON.stringify({ success: true, data }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (error: unknown) {
     console.error("Error in send-welcome-email function:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      },
-    );
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return new Response(JSON.stringify({ success: false, error: errorMessage }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   }
 };
 
