@@ -9,7 +9,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useDeposits } from "@/hooks/useDeposits";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Wallet as WalletIcon, ArrowUpRight, ArrowDownRight, ExternalLink, RefreshCw, Clock, CheckCircle, XCircle, AlertCircle, CreditCard, Bitcoin } from "lucide-react";
+import { Wallet as WalletIcon, ArrowUpRight, ArrowDownRight, ExternalLink, RefreshCw, Clock, CheckCircle, XCircle, AlertCircle, CreditCard, Bitcoin, Phone, ShieldAlert } from "lucide-react";
+import { Link } from "react-router-dom";
 import {
   Select,
   SelectContent,
@@ -41,12 +42,27 @@ const Wallet = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [pendingInvoiceUrl, setPendingInvoiceUrl] = useState<string | null>(null);
   const [depositMethod, setDepositMethod] = useState<DepositMethod>("crypto");
+  const [phoneVerified, setPhoneVerified] = useState<boolean | null>(null);
   
   // Card payment fields
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvv, setCardCvv] = useState("");
   const [cardName, setCardName] = useState("");
+
+  // Check phone verification status
+  useEffect(() => {
+    if (user?.id) {
+      supabase
+        .from("profiles")
+        .select("phone_verified")
+        .eq("id", user.id)
+        .single()
+        .then(({ data }) => {
+          setPhoneVerified((data as any)?.phone_verified ?? false);
+        });
+    }
+  }, [user?.id]);
 
   // Poll for pending deposit status updates
   useEffect(() => {
@@ -415,51 +431,73 @@ const Wallet = () => {
                 <CardTitle>Withdraw Funds</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Select Cryptocurrency</Label>
-                  <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select crypto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {cryptoOptions.map((crypto) => (
-                        <SelectItem key={crypto.id} value={crypto.id}>
-                          {crypto.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {phoneVerified === false ? (
+                  <div className="text-center py-8 space-y-4">
+                    <div className="mx-auto w-16 h-16 rounded-full bg-warning/10 flex items-center justify-center">
+                      <ShieldAlert className="h-8 w-8 text-warning" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">Phone Verification Required</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        You need to verify your phone number before making withdrawals.
+                      </p>
+                    </div>
+                    <Link to="/dashboard/profile">
+                      <Button className="gap-2">
+                        <Phone className="h-4 w-4" />
+                        Verify Phone Number
+                      </Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Select Cryptocurrency</Label>
+                      <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select crypto" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {cryptoOptions.map((crypto) => (
+                            <SelectItem key={crypto.id} value={crypto.id}>
+                              {crypto.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label>Amount (USD)</Label>
-                  <Input
-                    type="number"
-                    placeholder="Enter amount"
-                    value={withdrawAmount}
-                    onChange={(e) => setWithdrawAmount(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Available: ${(user?.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                </div>
+                    <div className="space-y-2">
+                      <Label>Amount (USD)</Label>
+                      <Input
+                        type="number"
+                        placeholder="Enter amount"
+                        value={withdrawAmount}
+                        onChange={(e) => setWithdrawAmount(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Available: ${(user?.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label>Wallet Address</Label>
-                  <Input
-                    placeholder="Enter your wallet address"
-                    value={withdrawAddress}
-                    onChange={(e) => setWithdrawAddress(e.target.value)}
-                  />
-                </div>
+                    <div className="space-y-2">
+                      <Label>Wallet Address</Label>
+                      <Input
+                        placeholder="Enter your wallet address"
+                        value={withdrawAddress}
+                        onChange={(e) => setWithdrawAddress(e.target.value)}
+                      />
+                    </div>
 
-                <Button
-                  className="w-full"
-                  onClick={handleWithdraw}
-                  disabled={isProcessing || (user?.balance || 0) < parseFloat(withdrawAmount || "0")}
-                >
-                  {isProcessing ? "Processing..." : "Request Withdrawal"}
-                </Button>
+                    <Button
+                      className="w-full"
+                      onClick={handleWithdraw}
+                      disabled={isProcessing || (user?.balance || 0) < parseFloat(withdrawAmount || "0")}
+                    >
+                      {isProcessing ? "Processing..." : "Request Withdrawal"}
+                    </Button>
+                  </>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

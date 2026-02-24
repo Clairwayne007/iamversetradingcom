@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface EmailTemplate {
   id: string;
@@ -23,6 +24,8 @@ interface EmailTemplate {
 
 const AdminSettings = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isModerator = user?.role === "moderator";
 
   const { data: templates, isLoading } = useQuery({
     queryKey: ["email-templates"],
@@ -39,42 +42,44 @@ const AdminSettings = () => {
   return (
     <AdminLayout>
       <div className="space-y-6 max-w-4xl">
-        {/* Email Templates */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5 text-primary" />
-              Email Templates
-            </CardTitle>
-            <CardDescription>
-              Edit the content of emails sent to users. Use placeholders like {"{{name}}"}, {"{{resetUrl}}"}, {"{{newEmail}}"}.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : templates && templates.length > 0 ? (
-              <Tabs defaultValue={templates[0].template_key}>
-                <TabsList className="w-full justify-start flex-wrap h-auto gap-1">
+        {/* Email Templates - Moderator Only */}
+        {isModerator && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5 text-primary" />
+                Email Templates
+              </CardTitle>
+              <CardDescription>
+                Edit the content of emails sent to users. Use placeholders like {"{{name}}"}, {"{{resetUrl}}"}, {"{{newEmail}}"}.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : templates && templates.length > 0 ? (
+                <Tabs defaultValue={templates[0].template_key}>
+                  <TabsList className="w-full justify-start flex-wrap h-auto gap-1">
+                    {templates.map((t) => (
+                      <TabsTrigger key={t.template_key} value={t.template_key} className="text-xs">
+                        {t.template_key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
                   {templates.map((t) => (
-                    <TabsTrigger key={t.template_key} value={t.template_key} className="text-xs">
-                      {t.template_key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-                    </TabsTrigger>
+                    <TabsContent key={t.template_key} value={t.template_key}>
+                      <EmailTemplateEditor template={t} />
+                    </TabsContent>
                   ))}
-                </TabsList>
-                {templates.map((t) => (
-                  <TabsContent key={t.template_key} value={t.template_key}>
-                    <EmailTemplateEditor template={t} />
-                  </TabsContent>
-                ))}
-              </Tabs>
-            ) : (
-              <p className="text-muted-foreground text-sm">No email templates found.</p>
-            )}
-          </CardContent>
-        </Card>
+                </Tabs>
+              ) : (
+                <p className="text-muted-foreground text-sm">No email templates found.</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Platform Settings */}
         <Card>

@@ -1,113 +1,115 @@
+import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/layouts/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, DollarSign, TrendingUp, Activity } from "lucide-react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { Users, DollarSign, TrendingUp, Activity, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
-// Mock data - replace with API
-const stats = {
-  totalUsers: 1250,
-  totalDeposits: 458000,
-  totalWithdrawals: 125000,
-  activeInvestments: 342,
-};
+interface Stats {
+  totalUsers: number;
+  totalDeposits: number;
+  totalWithdrawals: number;
+  activeInvestments: number;
+}
 
-const chartData = [
-  { name: "Jan", deposits: 40000, withdrawals: 12000 },
-  { name: "Feb", deposits: 55000, withdrawals: 18000 },
-  { name: "Mar", deposits: 48000, withdrawals: 15000 },
-  { name: "Apr", deposits: 62000, withdrawals: 22000 },
-  { name: "May", deposits: 71000, withdrawals: 25000 },
-  { name: "Jun", deposits: 68000, withdrawals: 20000 },
-];
-
-const recentActivity = [
-  { id: 1, user: "john@example.com", action: "Deposit", amount: 500, date: "2024-01-25 14:30" },
-  { id: 2, user: "jane@example.com", action: "Investment", amount: 1000, date: "2024-01-25 13:15" },
-  { id: 3, user: "mike@example.com", action: "Withdrawal", amount: 200, date: "2024-01-25 12:00" },
-  { id: 4, user: "sarah@example.com", action: "Registration", amount: 0, date: "2024-01-25 11:30" },
-  { id: 5, user: "tom@example.com", action: "Deposit", amount: 2000, date: "2024-01-25 10:00" },
-];
+interface RecentActivity {
+  id: string;
+  user: string;
+  action: string;
+  amount: number;
+  date: string;
+}
 
 const AdminOverview = () => {
+  const [stats, setStats] = useState<Stats>({ totalUsers: 0, totalDeposits: 0, totalWithdrawals: 0, activeInvestments: 0 });
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [profilesRes, depositsRes, withdrawalsRes, investmentsRes] = await Promise.all([
+        supabase.from("profiles").select("id, email, created_at"),
+        supabase.from("deposits").select("id, amount_usd, status, user_id, created_at"),
+        supabase.from("withdrawals").select("id, amount_usd, status, user_id, created_at"),
+        supabase.from("investments").select("id, amount_usd, status, user_id, created_at, plan_name"),
+      ]);
+
+      const profiles = profilesRes.data || [];
+      const deposits = depositsRes.data || [];
+      const withdrawals = withdrawalsRes.data || [];
+      const investments = investmentsRes.data || [];
+
+      const emailMap = new Map(profiles.map((p) => [p.id, p.email]));
+
+      const confirmedDeposits = deposits.filter((d) => d.status === "confirmed");
+      const completedWithdrawals = withdrawals.filter((w) => w.status === "completed");
+      const activeInvs = investments.filter((i) => i.status === "active");
+
+      setStats({
+        totalUsers: profiles.length,
+        totalDeposits: confirmedDeposits.reduce((sum, d) => sum + Number(d.amount_usd), 0),
+        totalWithdrawals: completedWithdrawals.reduce((sum, w) => sum + Number(w.amount_usd), 0),
+        activeInvestments: activeInvs.length,
+      });
+
+      // Build recent activity from all sources
+      const activities: RecentActivity[] = [
+        ...deposits.map((d) => ({
+          id: `dep-${d.id}`,
+          user: emailMap.get(d.user_id) || d.user_id,
+          action: "Deposit",
+          amount: Number(d.amount_usd),
+          date: d.created_at || "",
+        })),
+        ...withdrawals.map((w) => ({
+          id: `wd-${w.id}`,
+          user: emailMap.get(w.user_id) || w.user_id,
+          action: "Withdrawal",
+          amount: Number(w.amount_usd),
+          date: w.created_at || "",
+        })),
+        ...investments.map((inv) => ({
+          id: `inv-${inv.id}`,
+          user: emailMap.get(inv.user_id) || inv.user_id,
+          action: `Investment (${inv.plan_name})`,
+          amount: Number(inv.amount_usd),
+          date: inv.created_at || "",
+        })),
+      ];
+
+      activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setRecentActivity(activities.slice(0, 10));
+    } catch (error) {
+      console.error("Error fetching admin overview:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout>
       <div className="space-y-6">
         {/* Stats cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            title="Total Users"
-            value={stats.totalUsers.toLocaleString()}
-            icon={Users}
-            color="primary"
-          />
-          <StatCard
-            title="Total Deposits"
-            value={`$${stats.totalDeposits.toLocaleString()}`}
-            icon={DollarSign}
-            color="success"
-          />
-          <StatCard
-            title="Total Withdrawals"
-            value={`$${stats.totalWithdrawals.toLocaleString()}`}
-            icon={TrendingUp}
-            color="warning"
-          />
-          <StatCard
-            title="Active Investments"
-            value={stats.activeInvestments.toString()}
-            icon={Activity}
-            color="primary"
-          />
+          <StatCard title="Total Users" value={stats.totalUsers.toLocaleString()} icon={Users} color="primary" />
+          <StatCard title="Total Deposits" value={`$${stats.totalDeposits.toLocaleString()}`} icon={DollarSign} color="success" />
+          <StatCard title="Total Withdrawals" value={`$${stats.totalWithdrawals.toLocaleString()}`} icon={TrendingUp} color="warning" />
+          <StatCard title="Active Investments" value={stats.activeInvestments.toString()} icon={Activity} color="primary" />
         </div>
-
-        {/* Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Financial Overview</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="colorDeposits" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="colorWithdrawals" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--warning))" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(var(--warning))" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
-                  <YAxis stroke="hsl(var(--muted-foreground))" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="deposits"
-                    stroke="hsl(var(--success))"
-                    fill="url(#colorDeposits)"
-                    name="Deposits"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="withdrawals"
-                    stroke="hsl(var(--warning))"
-                    fill="url(#colorWithdrawals)"
-                    name="Withdrawals"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Recent activity */}
         <Card>
@@ -115,25 +117,31 @@ const AdminOverview = () => {
             <CardTitle>Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {recentActivity.map((activity) => (
-                <div
-                  key={activity.id}
-                  className="flex items-center justify-between py-3 border-b border-border last:border-0"
-                >
-                  <div>
-                    <p className="font-medium">{activity.user}</p>
-                    <p className="text-sm text-muted-foreground">{activity.action}</p>
+            {recentActivity.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">No transactions yet</p>
+            ) : (
+              <div className="space-y-3">
+                {recentActivity.map((activity) => (
+                  <div
+                    key={activity.id}
+                    className="flex items-center justify-between py-3 border-b border-border last:border-0"
+                  >
+                    <div>
+                      <p className="font-medium">{activity.user}</p>
+                      <p className="text-sm text-muted-foreground">{activity.action}</p>
+                    </div>
+                    <div className="text-right">
+                      {activity.amount > 0 && (
+                        <p className="font-medium">${activity.amount.toLocaleString()}</p>
+                      )}
+                      <p className="text-sm text-muted-foreground">
+                        {activity.date ? new Date(activity.date).toLocaleString() : "N/A"}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    {activity.amount > 0 && (
-                      <p className="font-medium">${activity.amount.toLocaleString()}</p>
-                    )}
-                    <p className="text-sm text-muted-foreground">{activity.date}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -142,15 +150,9 @@ const AdminOverview = () => {
 };
 
 const StatCard = ({
-  title,
-  value,
-  icon: Icon,
-  color,
+  title, value, icon: Icon, color,
 }: {
-  title: string;
-  value: string;
-  icon: React.ComponentType<{ className?: string }>;
-  color: "primary" | "success" | "warning";
+  title: string; value: string; icon: React.ComponentType<{ className?: string }>; color: "primary" | "success" | "warning";
 }) => {
   const colorClasses = {
     primary: "bg-primary/10 text-primary",
