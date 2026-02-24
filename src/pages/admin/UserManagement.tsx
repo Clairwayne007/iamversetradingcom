@@ -29,7 +29,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Search, MoreHorizontal, Shield, ShieldCheck, Crown, Loader2, Eye } from "lucide-react";
-import type { AppRole } from "@/contexts/AuthContext";
+import { useAuth, type AppRole } from "@/contexts/AuthContext";
 import { UserDetailsModal } from "@/components/admin/UserDetailsModal";
 
 interface UserWithRole {
@@ -44,6 +44,8 @@ interface UserWithRole {
 
 const UserManagement = () => {
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
+  const currentUserRole = currentUser?.role;
   const [searchQuery, setSearchQuery] = useState("");
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
@@ -249,32 +251,37 @@ const UserManagement = () => {
                               <Eye className="h-4 w-4" />
                               View Details
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="gap-2"
-                              disabled={user.role === "admin"}
-                              onClick={() => openRoleDialog(user, "admin")}
-                            >
-                              <Crown className="h-4 w-4 text-destructive" />
-                              Promote to Admin
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="gap-2"
-                              disabled={user.role === "moderator"}
-                              onClick={() => openRoleDialog(user, "moderator")}
-                            >
-                              <ShieldCheck className="h-4 w-4 text-primary" />
-                              Make Moderator
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="gap-2"
-                              disabled={user.role === "user"}
-                              onClick={() => openRoleDialog(user, "user")}
-                            >
-                              <Shield className="h-4 w-4" />
-                              Demote to User
-                            </DropdownMenuItem>
+                            {/* Only show role management for moderators */}
+                            {currentUserRole === "moderator" && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="gap-2"
+                                  disabled={user.role === "admin"}
+                                  onClick={() => openRoleDialog(user, "admin")}
+                                >
+                                  <Crown className="h-4 w-4 text-destructive" />
+                                  Promote to Admin
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="gap-2"
+                                  disabled={user.role === "moderator"}
+                                  onClick={() => openRoleDialog(user, "moderator")}
+                                >
+                                  <ShieldCheck className="h-4 w-4 text-primary" />
+                                  Make Moderator
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="gap-2"
+                                  disabled={user.role === "user"}
+                                  onClick={() => openRoleDialog(user, "user")}
+                                >
+                                  <Shield className="h-4 w-4" />
+                                  Demote to User
+                                </DropdownMenuItem>
+                              </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>

@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.expire-deposits]
 verify_jwt = false
+
+[functions.notify-moderator]
+verify_jwt = false

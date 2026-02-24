@@ -101,7 +101,6 @@ const AdminTransactions = () => {
 
       // If deposit confirmed, update user balance
       if (tx.type === "deposit" && statusField === "confirmed") {
-        // Get user profile by looking up the deposit
         const { data: deposit } = await supabase
           .from("deposits")
           .select("user_id, amount_usd")
@@ -121,6 +120,22 @@ const AdminTransactions = () => {
               .update({ balance: Number(profile.balance) + Number(deposit.amount_usd) })
               .eq("id", deposit.user_id);
           }
+        }
+      }
+
+      // Notify moderators of successful transactions
+      if (statusField === "confirmed" || statusField === "completed") {
+        try {
+          await supabase.functions.invoke("notify-moderator", {
+            body: {
+              transaction_type: tx.type === "deposit" ? "Deposit" : "Withdrawal",
+              amount: tx.amount,
+              user_email: tx.user_email,
+              transaction_id: tx.id,
+            },
+          });
+        } catch (notifyErr) {
+          console.error("Failed to notify moderator:", notifyErr);
         }
       }
 
