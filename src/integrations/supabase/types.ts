@@ -174,6 +174,7 @@ export type Database = {
           occupation: string | null
           phone_number: string | null
           phone_verified: boolean | null
+          reviewed: boolean | null
           sex: string | null
           updated_at: string | null
         }
@@ -189,6 +190,7 @@ export type Database = {
           occupation?: string | null
           phone_number?: string | null
           phone_verified?: boolean | null
+          reviewed?: boolean | null
           sex?: string | null
           updated_at?: string | null
         }
@@ -204,6 +206,7 @@ export type Database = {
           occupation?: string | null
           phone_number?: string | null
           phone_verified?: boolean | null
+          reviewed?: boolean | null
           sex?: string | null
           updated_at?: string | null
         }
