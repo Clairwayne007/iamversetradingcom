@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AdminLayout } from "@/components/layouts/AdminLayout";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,18 @@ const AdminTransactions = () => {
   useEffect(() => {
     fetchTransactions();
   }, []);
+
+  const handleRefresh = useCallback(() => {
+    fetchTransactions();
+  }, []);
+
+  useRealtimeSubscription(
+    [
+      { table: "deposits", alertOnInsert: "💰 New Deposit Received" },
+      { table: "withdrawals", alertOnInsert: "💸 New Withdrawal Request" },
+    ],
+    handleRefresh
+  );
 
   const fetchTransactions = async () => {
     setLoading(true);
