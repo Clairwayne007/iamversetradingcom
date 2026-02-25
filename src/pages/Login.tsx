@@ -42,7 +42,12 @@ const Login = () => {
         toast({ title: "Welcome back!", description: "Login successful" });
         navigate("/dashboard");
       } else {
-        toast({ title: "Error", description: result.error, variant: "destructive" });
+        const msg = result.error || "";
+        if (msg.toLowerCase().includes("email not confirmed")) {
+          toast({ title: "Email Not Verified", description: "Please check your email and click the verification link before logging in.", variant: "destructive" });
+        } else {
+          toast({ title: "Error", description: result.error, variant: "destructive" });
+        }
       }
     } catch (error) {
       toast({ title: "Error", description: "Something went wrong", variant: "destructive" });

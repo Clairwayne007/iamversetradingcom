@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, MoreHorizontal, Shield, ShieldCheck, Crown, Loader2, Eye } from "lucide-react";
+import { Search, MoreHorizontal, Shield, ShieldCheck, Crown, Loader2, Eye, Sparkles } from "lucide-react";
 import { useAuth, type AppRole } from "@/contexts/AuthContext";
 import { UserDetailsModal } from "@/components/admin/UserDetailsModal";
 
@@ -41,6 +41,7 @@ interface UserWithRole {
   role: AppRole;
   createdAt: string;
   avatar_url?: string;
+  reviewed?: boolean;
 }
 
 const UserManagement = () => {
@@ -107,6 +108,7 @@ const UserManagement = () => {
         balance: Number(profile.balance) || 0,
         role: roleMap.get(profile.id) || "user",
         createdAt: profile.created_at ? new Date(profile.created_at).toLocaleDateString() : "N/A",
+        reviewed: profile.reviewed ?? false,
       }));
 
       setUsers(usersWithRoles);
@@ -240,7 +242,15 @@ const UserManagement = () => {
                 <TableBody>
                   {filteredUsers.map((user) => (
                     <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell className="font-medium flex items-center gap-2">
+                        {user.name}
+                        {!user.reviewed && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary text-primary-foreground flex items-center gap-0.5">
+                            <Sparkles className="h-3 w-3" />
+                            NEW
+                          </span>
+                        )}
+                      </TableCell>
                       <TableCell>{user.email}</TableCell>
                       <TableCell>${user.balance.toLocaleString()}</TableCell>
                       <TableCell>{getRoleBadge(user.role)}</TableCell>
@@ -255,9 +265,21 @@ const UserManagement = () => {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
                               className="gap-2"
-                              onClick={() => {
+                              onClick={async () => {
                                 setSelectedUser(user);
                                 setDetailsModalOpen(true);
+                                // Mark as reviewed
+                                if (!user.reviewed) {
+                                  await supabase
+                                    .from("profiles")
+                                    .update({ reviewed: true })
+                                    .eq("id", user.id);
+                                  setUsers((prev) =>
+                                    prev.map((u) =>
+                                      u.id === user.id ? { ...u, reviewed: true } : u
+                                    )
+                                  );
+                                }
                               }}
                             >
                               <Eye className="h-4 w-4" />
