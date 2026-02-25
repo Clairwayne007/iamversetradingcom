@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AdminLayout } from "@/components/layouts/AdminLayout";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +59,17 @@ const UserManagement = () => {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  const handleRefresh = useCallback(() => {
+    fetchUsers();
+  }, []);
+
+  useRealtimeSubscription(
+    [
+      { table: "profiles", alertOnInsert: "🆕 New User Registered" },
+    ],
+    handleRefresh
+  );
 
   const fetchUsers = async () => {
     try {

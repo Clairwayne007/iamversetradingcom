@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AdminLayout } from "@/components/layouts/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, DollarSign, TrendingUp, Activity, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 
 interface Stats {
   totalUsers: number;
@@ -27,6 +28,20 @@ const AdminOverview = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleRefresh = useCallback(() => {
+    fetchData();
+  }, []);
+
+  useRealtimeSubscription(
+    [
+      { table: "profiles", alertOnInsert: "🆕 New User Registered" },
+      { table: "deposits", alertOnInsert: "💰 New Deposit" },
+      { table: "withdrawals", alertOnInsert: "💸 New Withdrawal" },
+      { table: "investments", alertOnInsert: "📈 New Investment" },
+    ],
+    handleRefresh
+  );
 
   const fetchData = async () => {
     setLoading(true);
