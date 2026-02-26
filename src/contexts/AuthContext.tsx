@@ -83,7 +83,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         console.log("Auth state changed:", event, newSession?.user?.email);
-        
+
         // Handle token refresh errors by signing out
         if (event === "TOKEN_REFRESHED" && !newSession) {
           console.log("Token refresh failed, signing out...");
@@ -102,6 +102,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const profile = await fetchProfile(newSession.user);
             setUser(profile);
             setIsLoading(false);
+
+            // Send welcome email on first confirmed sign-in
+            if (event === "SIGNED_IN" && profile) {
+              try {
+                const { data: profileData } = await supabase
+                  .from("profiles")
+                  .select("welcome_email_sent")
+                  .eq("id", newSession.user.id)
+                  .single();
+
+                if (profileData && !profileData.welcome_email_sent) {
+                  await supabase.functions.invoke("send-welcome-email", {
+                    body: { email: profile.email, name: profile.name },
+                  });
+                  await supabase
+                    .from("profiles")
+                    .update({ welcome_email_sent: true })
+                    .eq("id", newSession.user.id);
+                }
+              } catch (err) {
+                console.error("Welcome email error:", err);
+              }
+            }
           }, 0);
         } else {
           setUser(null);
@@ -161,7 +184,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       password,
       options: {
         data: { name },
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: `${window.location.origin}/dashboard`,
       },
     });
 
