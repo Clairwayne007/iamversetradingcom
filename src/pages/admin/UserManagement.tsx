@@ -107,7 +107,9 @@ const UserManagement = () => {
         email: profile.email,
         balance: Number(profile.balance) || 0,
         role: roleMap.get(profile.id) || "user",
-        createdAt: profile.created_at ? new Date(profile.created_at).toLocaleDateString() : "N/A",
+        createdAt: profile.created_at
+          ? new Date(profile.created_at).toLocaleDateString() + " " + new Date(profile.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          : "N/A",
         reviewed: profile.reviewed ?? false,
       }));
 
@@ -124,11 +126,14 @@ const UserManagement = () => {
     }
   };
 
-  const filteredUsers = users.filter(
-    (user) =>
+  const filteredUsers = users.filter((user) => {
+    // Admin should not see moderators
+    if (currentUserRole === "admin" && user.role === "moderator") return false;
+    return (
       user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    );
+  });
 
   const handleRoleChange = async () => {
     if (!selectedUser) return;

@@ -177,6 +177,7 @@ export type Database = {
           reviewed: boolean | null
           sex: string | null
           updated_at: string | null
+          welcome_email_sent: boolean | null
         }
         Insert: {
           age?: number | null
@@ -193,6 +194,7 @@ export type Database = {
           reviewed?: boolean | null
           sex?: string | null
           updated_at?: string | null
+          welcome_email_sent?: boolean | null
         }
         Update: {
           age?: number | null
@@ -209,6 +211,7 @@ export type Database = {
           reviewed?: boolean | null
           sex?: string | null
           updated_at?: string | null
+          welcome_email_sent?: boolean | null
         }
         Relationships: []
       }
