@@ -17,6 +17,7 @@ export type Database = {
       deposits: {
         Row: {
           amount_usd: number
+          balance_credited: boolean
           created_at: string | null
           crypto_amount: number | null
           crypto_currency: string
@@ -30,6 +31,7 @@ export type Database = {
         }
         Insert: {
           amount_usd: number
+          balance_credited?: boolean
           created_at?: string | null
           crypto_amount?: number | null
           crypto_currency: string
@@ -43,6 +45,7 @@ export type Database = {
         }
         Update: {
           amount_usd?: number
+          balance_credited?: boolean
           created_at?: string | null
           crypto_amount?: number | null
           crypto_currency?: string
@@ -274,6 +277,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      credit_user_balance: {
+        Args: { p_amount: number; p_user_id: string }
+        Returns: boolean
+      }
       expire_old_deposits: { Args: never; Returns: number }
       get_user_role: {
         Args: { _user_id: string }

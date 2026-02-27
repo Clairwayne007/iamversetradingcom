@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { AdminLayout } from "@/components/layouts/AdminLayout";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -112,26 +113,25 @@ const AdminTransactions = () => {
 
       if (error) throw error;
 
-      // If deposit confirmed, update user balance
+      // If deposit confirmed, credit user balance (only if not already credited)
       if (tx.type === "deposit" && statusField === "confirmed") {
         const { data: deposit } = await supabase
           .from("deposits")
-          .select("user_id, amount_usd")
+          .select("user_id, amount_usd, balance_credited")
           .eq("id", tx.id)
           .single();
 
-        if (deposit) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("balance")
-            .eq("id", deposit.user_id)
-            .single();
+        if (deposit && !deposit.balance_credited) {
+          const { error: creditError } = await supabase.rpc("credit_user_balance", {
+            p_user_id: deposit.user_id,
+            p_amount: deposit.amount_usd,
+          });
 
-          if (profile) {
+          if (!creditError) {
             await supabase
-              .from("profiles")
-              .update({ balance: Number(profile.balance) + Number(deposit.amount_usd) })
-              .eq("id", deposit.user_id);
+              .from("deposits")
+              .update({ balance_credited: true })
+              .eq("id", tx.id);
           }
         }
       }
@@ -250,10 +250,81 @@ const TransactionTable = ({
   updatingId: string | null;
   showActions?: boolean;
 }) => {
+  const isMobile = useIsMobile();
+
   if (transactions.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
         No transactions found
+      </div>
+    );
+  }
+
+  const StatusBadge = ({ status }: { status: string }) => (
+    <span
+      className={`px-2 py-1 rounded-full text-xs font-medium ${
+        status === "confirmed" || status === "completed"
+          ? "bg-success/10 text-success"
+          : status === "failed" || status === "expired"
+          ? "bg-destructive/10 text-destructive"
+          : "bg-warning/10 text-warning"
+      }`}
+    >
+      {status}
+    </span>
+  );
+
+  const ActionButtons = ({ tx }: { tx: AdminTransaction }) => {
+    const isPending = tx.status === "pending" || tx.status === "waiting" || tx.status === "confirming";
+    if (!isPending) return null;
+    return (
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="text-success hover:text-success"
+          onClick={() => onStatusUpdate(tx, "successful")}
+          disabled={updatingId === tx.id}
+        >
+          {updatingId === tx.id ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Check className="h-4 w-4" />
+          )}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="text-destructive hover:text-destructive"
+          onClick={() => onStatusUpdate(tx, "failed")}
+          disabled={updatingId === tx.id}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  };
+
+  if (isMobile) {
+    return (
+      <div className="space-y-3">
+        {transactions.map((tx) => (
+          <div key={`${tx.type}-${tx.id}`} className="p-4 rounded-lg border border-border space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium capitalize">{tx.type}</span>
+              <StatusBadge status={tx.status} />
+            </div>
+            <p className="text-xs text-muted-foreground truncate">{tx.user_email}</p>
+            <div className="flex items-center justify-between">
+              <span className="font-semibold">${tx.amount.toLocaleString()}</span>
+              <span className="text-xs text-muted-foreground">{tx.crypto?.toUpperCase()}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">{tx.date}</span>
+              <ActionButtons tx={tx} />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
@@ -272,59 +343,19 @@ const TransactionTable = ({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {transactions.map((tx) => {
-          const isPending = tx.status === "pending" || tx.status === "waiting" || tx.status === "confirming";
-          return (
-            <TableRow key={`${tx.type}-${tx.id}`}>
-              <TableCell className="text-sm">{tx.user_email}</TableCell>
-              <TableCell className="capitalize">{tx.type}</TableCell>
-              <TableCell>${tx.amount.toLocaleString()}</TableCell>
-              <TableCell>{tx.crypto?.toUpperCase()}</TableCell>
-              <TableCell>
-                <span
-                  className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    tx.status === "confirmed" || tx.status === "completed"
-                      ? "bg-success/10 text-success"
-                      : tx.status === "failed" || tx.status === "expired"
-                      ? "bg-destructive/10 text-destructive"
-                      : "bg-warning/10 text-warning"
-                  }`}
-                >
-                  {tx.status}
-                </span>
-              </TableCell>
-              <TableCell>{tx.date}</TableCell>
-              <TableCell className="text-right">
-                {isPending && (
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-success hover:text-success"
-                      onClick={() => onStatusUpdate(tx, "successful")}
-                      disabled={updatingId === tx.id}
-                    >
-                      {updatingId === tx.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Check className="h-4 w-4" />
-                      )}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => onStatusUpdate(tx, "failed")}
-                      disabled={updatingId === tx.id}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </TableCell>
-            </TableRow>
-          );
-        })}
+        {transactions.map((tx) => (
+          <TableRow key={`${tx.type}-${tx.id}`}>
+            <TableCell className="text-sm">{tx.user_email}</TableCell>
+            <TableCell className="capitalize">{tx.type}</TableCell>
+            <TableCell>${tx.amount.toLocaleString()}</TableCell>
+            <TableCell>{tx.crypto?.toUpperCase()}</TableCell>
+            <TableCell><StatusBadge status={tx.status} /></TableCell>
+            <TableCell>{tx.date}</TableCell>
+            <TableCell className="text-right">
+              <ActionButtons tx={tx} />
+            </TableCell>
+          </TableRow>
+        ))}
       </TableBody>
     </Table>
   );

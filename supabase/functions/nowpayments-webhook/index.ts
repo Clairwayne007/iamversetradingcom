@@ -80,41 +80,22 @@ serve(async (req) => {
       throw updateError;
     }
 
-    // If payment confirmed, credit user balance
-    if (status === "confirmed" && deposit) {
-      const { error: profileError } = await supabase.rpc("credit_user_balance", {
+    // If payment confirmed and not already credited, credit user balance
+    if (status === "confirmed" && deposit && !deposit.balance_credited) {
+      const { error: creditError } = await supabase.rpc("credit_user_balance", {
         p_user_id: deposit.user_id,
         p_amount: deposit.amount_usd,
       });
 
-      if (profileError) {
-        console.error("Error crediting balance:", profileError);
-        // Create the RPC function if it doesn't exist and retry with direct update
-        const { error: directError } = await supabase
-          .from("profiles")
-          .update({
-            balance: supabase.rpc("get_balance_plus", {
-              user_id: deposit.user_id,
-              add_amount: deposit.amount_usd,
-            }),
-          })
-          .eq("id", deposit.user_id);
-
-        if (directError) {
-          // Fallback: get current balance and add
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("balance")
-            .eq("id", deposit.user_id)
-            .single();
-
-          if (profile) {
-            await supabase
-              .from("profiles")
-              .update({ balance: Number(profile.balance) + Number(deposit.amount_usd) })
-              .eq("id", deposit.user_id);
-          }
-        }
+      if (creditError) {
+        console.error("Error crediting balance:", creditError);
+      } else {
+        // Mark deposit as credited to prevent double-crediting
+        await supabase
+          .from("deposits")
+          .update({ balance_credited: true })
+          .eq("id", deposit.id);
+        console.log(`Balance credited for deposit ${deposit.id}: $${deposit.amount_usd}`);
       }
     }
 
