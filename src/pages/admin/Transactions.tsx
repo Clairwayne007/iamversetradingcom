@@ -113,28 +113,8 @@ const AdminTransactions = () => {
 
       if (error) throw error;
 
-      // If deposit confirmed, credit user balance (only if not already credited)
-      if (tx.type === "deposit" && statusField === "confirmed") {
-        const { data: deposit } = await supabase
-          .from("deposits")
-          .select("user_id, amount_usd, balance_credited")
-          .eq("id", tx.id)
-          .single();
-
-        if (deposit && !deposit.balance_credited) {
-          const { error: creditError } = await supabase.rpc("credit_user_balance", {
-            p_user_id: deposit.user_id,
-            p_amount: deposit.amount_usd,
-          });
-
-          if (!creditError) {
-            await supabase
-              .from("deposits")
-              .update({ balance_credited: true })
-              .eq("id", tx.id);
-          }
-        }
-      }
+      // Deposit balance crediting is handled automatically by NOWPayments webhook
+      // Admin only manually processes withdrawals
 
       // Notify moderators of successful transactions
       if (statusField === "confirmed" || statusField === "completed") {
@@ -275,7 +255,11 @@ const TransactionTable = ({
   );
 
   const ActionButtons = ({ tx }: { tx: AdminTransaction }) => {
-    const isPending = tx.status === "pending" || tx.status === "waiting" || tx.status === "confirming";
+    // Deposits are auto-confirmed by NOWPayments webhook - no manual actions
+    if (tx.type === "deposit") return null;
+    
+    // Only show actions for pending withdrawals
+    const isPending = tx.status === "pending";
     if (!isPending) return null;
     return (
       <div className="flex gap-2">
