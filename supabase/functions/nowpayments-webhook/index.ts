@@ -1,11 +1,24 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { hmac } from "https://deno.land/x/hmac@v2.0.1/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
+
+function sortObject(obj: Record<string, unknown>): Record<string, unknown> {
+  return Object.keys(obj)
+    .sort()
+    .reduce((result: Record<string, unknown>, key: string) => {
+      result[key] =
+        obj[key] && typeof obj[key] === "object" && !Array.isArray(obj[key])
+          ? sortObject(obj[key] as Record<string, unknown>)
+          : obj[key];
+      return result;
+    }, {});
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -15,20 +28,46 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const ipnSecret = Deno.env.get("NOWPAYMENTS_IPN_SECRET");
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const payload = await req.json();
-    console.log("NOWPayments webhook received:", JSON.stringify(payload));
+    const body = await req.text();
+    const payload = JSON.parse(body);
+    console.log("NOWPayments webhook received:", body);
+
+    // Verify HMAC signature if IPN secret is configured
+    if (ipnSecret) {
+      const receivedSig = req.headers.get("x-nowpayments-sig");
+      if (!receivedSig) {
+        console.error("Missing x-nowpayments-sig header");
+        return new Response(
+          JSON.stringify({ error: "Missing signature" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const sorted = sortObject(payload);
+      const expectedSig = hmac("sha512", ipnSecret, JSON.stringify(sorted), "utf8", "hex");
+
+      if (receivedSig !== expectedSig) {
+        console.error("Signature mismatch. Expected:", expectedSig, "Received:", receivedSig);
+        return new Response(
+          JSON.stringify({ error: "Invalid signature" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      console.log("Signature verified successfully");
+    } else {
+      console.warn("No IPN secret configured, skipping signature verification");
+    }
 
     const {
       payment_id,
       invoice_id,
       payment_status,
       pay_amount,
-      pay_currency,
       actually_paid,
-      price_amount,
     } = payload;
 
     if (!invoice_id) {
@@ -80,6 +119,8 @@ serve(async (req) => {
       throw updateError;
     }
 
+    console.log(`Deposit ${deposit.id} updated to status: ${status}`);
+
     // If payment confirmed and not already credited, credit user balance
     if (status === "confirmed" && deposit && !deposit.balance_credited) {
       const { error: creditError } = await supabase.rpc("credit_user_balance", {
@@ -90,7 +131,6 @@ serve(async (req) => {
       if (creditError) {
         console.error("Error crediting balance:", creditError);
       } else {
-        // Mark deposit as credited to prevent double-crediting
         await supabase
           .from("deposits")
           .update({ balance_credited: true })
