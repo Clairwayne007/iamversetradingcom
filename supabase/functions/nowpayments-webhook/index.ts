@@ -62,7 +62,7 @@ serve(async (req) => {
       }
 
       const sorted = sortObject(payload);
-      const expectedSig = hmac("sha512", ipnSecret, JSON.stringify(sorted), "utf8", "hex");
+      const expectedSig = await hmacSha512(ipnSecret, JSON.stringify(sorted));
 
       if (receivedSig !== expectedSig) {
         console.error("Signature mismatch. Expected:", expectedSig, "Received:", receivedSig);
