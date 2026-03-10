@@ -42,6 +42,29 @@ export const useDeposits = () => {
 
   useEffect(() => {
     fetchDeposits();
+
+    if (!session) return;
+
+    // Realtime subscription for instant updates
+    const channel = supabase
+      .channel("deposits-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "deposits",
+        },
+        (payload) => {
+          console.log("Deposit realtime update:", payload);
+          fetchDeposits();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [session]);
 
   const createDeposit = async (
