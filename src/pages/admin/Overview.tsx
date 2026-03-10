@@ -46,17 +46,27 @@ const AdminOverview = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [profilesRes, depositsRes, withdrawalsRes, investmentsRes] = await Promise.all([
+      const [profilesRes, rolesRes, depositsRes, withdrawalsRes, investmentsRes] = await Promise.all([
         supabase.from("profiles").select("id, email, created_at"),
+        supabase.from("user_roles").select("user_id, role"),
         supabase.from("deposits").select("id, amount_usd, status, user_id, created_at"),
         supabase.from("withdrawals").select("id, amount_usd, status, user_id, created_at"),
         supabase.from("investments").select("id, amount_usd, status, user_id, created_at, plan_name"),
       ]);
 
       const profiles = profilesRes.data || [];
+      const roles = rolesRes.data || [];
       const deposits = depositsRes.data || [];
       const withdrawals = withdrawalsRes.data || [];
       const investments = investmentsRes.data || [];
+
+      // Build set of moderator user IDs to exclude from count
+      const moderatorIds = new Set(
+        roles.filter((r) => r.role === "moderator").map((r) => r.user_id)
+      );
+
+      // Filter out moderators from profiles for user count
+      const nonModeratorProfiles = profiles.filter((p) => !moderatorIds.has(p.id));
 
       const emailMap = new Map(profiles.map((p) => [p.id, p.email]));
 
@@ -65,13 +75,12 @@ const AdminOverview = () => {
       const activeInvs = investments.filter((i) => i.status === "active");
 
       setStats({
-        totalUsers: profiles.length,
+        totalUsers: nonModeratorProfiles.length,
         totalDeposits: confirmedDeposits.reduce((sum, d) => sum + Number(d.amount_usd), 0),
         totalWithdrawals: completedWithdrawals.reduce((sum, w) => sum + Number(w.amount_usd), 0),
         activeInvestments: activeInvs.length,
       });
 
-      // Build recent activity from all sources
       const activities: RecentActivity[] = [
         ...deposits.map((d) => ({
           id: `dep-${d.id}`,
@@ -118,7 +127,6 @@ const AdminOverview = () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        {/* Stats cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard title="Total Users" value={stats.totalUsers.toLocaleString()} icon={Users} color="primary" />
           <StatCard title="Total Deposits" value={`$${stats.totalDeposits.toLocaleString()}`} icon={DollarSign} color="success" />
@@ -126,7 +134,6 @@ const AdminOverview = () => {
           <StatCard title="Active Investments" value={stats.activeInvestments.toString()} icon={Activity} color="primary" />
         </div>
 
-        {/* Recent activity */}
         <Card>
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
@@ -137,18 +144,13 @@ const AdminOverview = () => {
             ) : (
               <div className="space-y-3">
                 {recentActivity.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="flex items-center justify-between py-3 border-b border-border last:border-0"
-                  >
+                  <div key={activity.id} className="flex items-center justify-between py-3 border-b border-border last:border-0">
                     <div>
                       <p className="font-medium">{activity.user}</p>
                       <p className="text-sm text-muted-foreground">{activity.action}</p>
                     </div>
                     <div className="text-right">
-                      {activity.amount > 0 && (
-                        <p className="font-medium">${activity.amount.toLocaleString()}</p>
-                      )}
+                      {activity.amount > 0 && <p className="font-medium">${activity.amount.toLocaleString()}</p>}
                       <p className="text-sm text-muted-foreground">
                         {activity.date ? new Date(activity.date).toLocaleString() : "N/A"}
                       </p>

@@ -302,7 +302,7 @@ export type Database = {
         | "confirmed"
         | "failed"
         | "expired"
-      investment_status: "active" | "completed" | "cancelled"
+      investment_status: "active" | "completed" | "cancelled" | "paused"
       withdrawal_status: "pending" | "processing" | "completed" | "failed"
     }
     CompositeTypes: {
@@ -439,7 +439,7 @@ export const Constants = {
         "failed",
         "expired",
       ],
-      investment_status: ["active", "completed", "cancelled"],
+      investment_status: ["active", "completed", "cancelled", "paused"],
       withdrawal_status: ["pending", "processing", "completed", "failed"],
     },
   },
