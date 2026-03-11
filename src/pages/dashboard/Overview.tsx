@@ -59,7 +59,7 @@ const Dashboard = () => {
               />
               <StatCard
                 title="Total Earnings"
-                value={totalEarned > 0 ? `$${totalEarned.toLocaleString()}` : "$0.00"}
+                value={totalEarned > 0 ? `$${totalEarned.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$0.00"}
                 icon={TrendingUp}
                 empty={totalEarned === 0}
               />
