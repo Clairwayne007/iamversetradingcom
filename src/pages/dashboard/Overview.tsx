@@ -102,17 +102,36 @@ const Dashboard = () => {
                   return (
                     <div
                       key={inv.id}
-                      className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-border"
+                      className="p-4 rounded-lg bg-muted/50 border border-border space-y-3"
                     >
-                      <div>
-                        <p className="font-medium">{inv.plan_name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          ${Number(inv.amount_usd).toLocaleString()} • {inv.roi_percent}% ROI Daily
-                        </p>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">{inv.plan_name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            ${Number(inv.amount_usd).toLocaleString()} invested
+                          </p>
+                        </div>
+                        <span className="px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                          {inv.roi_percent}% Daily
+                        </span>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium text-success">+${Number(inv.earned_amount).toLocaleString()}</p>
-                        <p className="text-sm text-muted-foreground">{daysLeft} days left</p>
+                      <div className="grid grid-cols-3 gap-2 text-sm">
+                        <div>
+                          <p className="text-muted-foreground text-xs">Daily Earning</p>
+                          <p className="font-medium text-success">
+                            +${(Number(inv.amount_usd) * Number(inv.roi_percent) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Total Earned</p>
+                          <p className="font-medium text-success">
+                            +${Number(inv.earned_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Days Left</p>
+                          <p className="font-medium">{daysLeft}</p>
+                        </div>
                       </div>
                     </div>
                   );
