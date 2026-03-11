@@ -117,7 +117,7 @@ const Investments = () => {
                           Active
                         </span>
                       </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                         <div>
                           <p className="text-muted-foreground">Invested</p>
                           <p className="font-medium">${Number(inv.amount_usd).toLocaleString()}</p>
@@ -127,8 +127,12 @@ const Investments = () => {
                           <p className="font-medium text-primary">{inv.roi_percent}%</p>
                         </div>
                         <div>
+                          <p className="text-muted-foreground">Daily Earning</p>
+                          <p className="font-medium text-success">+${(Number(inv.amount_usd) * Number(inv.roi_percent) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        </div>
+                        <div>
                           <p className="text-muted-foreground">Total Earned</p>
-                          <p className="font-medium text-success">+${Number(inv.earned_amount).toLocaleString()}</p>
+                          <p className="font-medium text-success">+${Number(inv.earned_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Days Left</p>
