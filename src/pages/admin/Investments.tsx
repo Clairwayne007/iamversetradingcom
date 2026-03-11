@@ -153,45 +153,61 @@ const AdminInvestments = () => {
                     <TableHead>Plan</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>ROI</TableHead>
-                    <TableHead>Earned</TableHead>
-                    <TableHead>Start Date</TableHead>
-                    <TableHead>End Date</TableHead>
+                    <TableHead>Daily Earning</TableHead>
+                    <TableHead>Total Earned</TableHead>
+                    <TableHead>Days Elapsed</TableHead>
+                    <TableHead>Days Left</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {investments.map((inv) => (
-                    <TableRow key={inv.id}>
-                      <TableCell className="text-sm">{inv.user_email}</TableCell>
-                      <TableCell className="font-medium">{inv.plan_name}</TableCell>
-                      <TableCell>${Number(inv.amount_usd).toLocaleString()}</TableCell>
-                      <TableCell>{inv.roi_percent}%</TableCell>
-                      <TableCell>${Number(inv.earned_amount || 0).toLocaleString()}</TableCell>
-                      <TableCell>{inv.start_date ? new Date(inv.start_date).toLocaleDateString() : "N/A"}</TableCell>
-                      <TableCell>{inv.end_date ? new Date(inv.end_date).toLocaleDateString() : "N/A"}</TableCell>
-                      <TableCell>{getStatusBadge(inv.status)}</TableCell>
-                      <TableCell className="text-right">
-                        {(inv.status === "active" || inv.status === "paused") && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="gap-1"
-                            onClick={() => {
-                              setSelectedInvestment(inv);
-                              setPauseDialogOpen(true);
-                            }}
-                          >
-                            {inv.status === "paused" ? (
-                              <><Play className="h-4 w-4 text-success" /> Resume</>
-                            ) : (
-                              <><Pause className="h-4 w-4 text-warning" /> Pause</>
-                            )}
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {investments.map((inv) => {
+                    const dailyEarning = Number(inv.amount_usd) * Number(inv.roi_percent) / 100;
+                    const startDate = inv.start_date ? new Date(inv.start_date) : new Date(inv.created_at || "");
+                    const now = new Date();
+                    const daysElapsed = Math.max(0, Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
+                    const daysLeft = inv.end_date
+                      ? Math.max(0, Math.ceil((new Date(inv.end_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+                      : inv.duration_days - daysElapsed;
+
+                    return (
+                      <TableRow key={inv.id}>
+                        <TableCell className="text-sm">{inv.user_email}</TableCell>
+                        <TableCell className="font-medium">{inv.plan_name}</TableCell>
+                        <TableCell>${Number(inv.amount_usd).toLocaleString()}</TableCell>
+                        <TableCell>{inv.roi_percent}%</TableCell>
+                        <TableCell className="text-success font-medium">
+                          +${dailyEarning.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell className="text-success font-medium">
+                          +${Number(inv.earned_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell>{daysElapsed}</TableCell>
+                        <TableCell>{Math.max(0, daysLeft)}</TableCell>
+                        <TableCell>{getStatusBadge(inv.status)}</TableCell>
+                        <TableCell className="text-right">
+                          {(inv.status === "active" || inv.status === "paused") && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="gap-1"
+                              onClick={() => {
+                                setSelectedInvestment(inv);
+                                setPauseDialogOpen(true);
+                              }}
+                            >
+                              {inv.status === "paused" ? (
+                                <><Play className="h-4 w-4 text-success" /> Resume</>
+                              ) : (
+                                <><Pause className="h-4 w-4 text-warning" /> Pause</>
+                              )}
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}

@@ -285,36 +285,61 @@ export const UserDetailsModal = ({ user, open, onOpenChange }: UserDetailsModalP
                   <div className="text-center py-8 text-muted-foreground">No investments found</div>
                 ) : (
                   <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                    {investments.map((inv) => (
-                      <Card key={inv.id}>
-                        <CardContent className="py-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium">{inv.plan_name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                ${Number(inv.amount_usd).toLocaleString()} • {inv.roi_percent}% ROI
-                              </p>
+                    {investments.map((inv) => {
+                      const dailyEarning = Number(inv.amount_usd) * Number(inv.roi_percent) / 100;
+                      const startDate = inv.start_date ? new Date(inv.start_date) : new Date();
+                      const now = new Date();
+                      const daysElapsed = Math.max(0, Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
+                      const daysLeft = inv.end_date
+                        ? Math.max(0, Math.ceil((new Date(inv.end_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+                        : inv.duration_days - daysElapsed;
+
+                      return (
+                        <Card key={inv.id}>
+                          <CardContent className="py-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium">{inv.plan_name}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  ${Number(inv.amount_usd).toLocaleString()} • {inv.roi_percent}% ROI Daily
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                {getStatusBadge(inv.status)}
+                              </div>
                             </div>
-                            <div className="text-right">
-                              {getStatusBadge(inv.status)}
-                              <p className="text-sm text-muted-foreground mt-1">
-                                Earned: ${Number(inv.earned_amount || 0).toLocaleString()}
-                              </p>
+                            <div className="grid grid-cols-4 gap-2 mt-3 text-xs">
+                              <div>
+                                <p className="text-muted-foreground">Daily Earning</p>
+                                <p className="font-medium text-success">+${dailyEarning.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Total Earned</p>
+                                <p className="font-medium text-success">+${Number(inv.earned_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Days Active</p>
+                                <p className="font-medium">{daysElapsed}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Days Left</p>
+                                <p className="font-medium">{Math.max(0, daysLeft)}</p>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              Start: {inv.start_date ? new Date(inv.start_date).toLocaleDateString() : "N/A"}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              End: {inv.end_date ? new Date(inv.end_date).toLocaleDateString() : "N/A"}
-                            </span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                            <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                Start: {inv.start_date ? new Date(inv.start_date).toLocaleDateString() : "N/A"}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                End: {inv.end_date ? new Date(inv.end_date).toLocaleDateString() : "N/A"}
+                              </span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 )}
               </TabsContent>
