@@ -126,7 +126,8 @@ const AdminInvestments = () => {
               <CardContent className="pt-6">
                 <h3 className="font-semibold">{plan.name}</h3>
                 <p className="text-2xl font-bold mt-1">${plan.amount.toLocaleString()}</p>
-                <p className="text-sm text-primary mt-1">{plan.roi}% ROI Daily</p>
+                <p className="text-sm text-primary mt-1">{plan.roi}% ROI in {plan.durationDays}d</p>
+                <p className="text-xs text-muted-foreground">Min. ${plan.amount.toLocaleString()}</p>
                 <p className="text-xs text-muted-foreground mt-1">Duration: {plan.duration}</p>
               </CardContent>
             </Card>
