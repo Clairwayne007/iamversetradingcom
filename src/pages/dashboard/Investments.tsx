@@ -223,9 +223,13 @@ const Investments = () => {
                     <span className="text-muted-foreground">Plan</span>
                     <span className="font-medium">{selectedPlan.name}</span>
                   </div>
+                   <div className="flex items-center justify-between mb-2">
+                    <span className="text-muted-foreground">Total ROI</span>
+                    <span className="font-medium text-primary">{selectedPlan.roi}%</span>
+                  </div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-muted-foreground">Daily ROI</span>
-                    <span className="font-medium text-primary">{selectedPlan.roi}%</span>
+                    <span className="font-medium text-primary">{(selectedPlan.roi / selectedPlan.durationDays).toFixed(2)}%</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Duration</span>
