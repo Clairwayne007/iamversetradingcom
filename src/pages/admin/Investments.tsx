@@ -164,7 +164,7 @@ const AdminInvestments = () => {
                 </TableHeader>
                 <TableBody>
                   {investments.map((inv) => {
-                    const dailyEarning = Number(inv.amount_usd) * Number(inv.roi_percent) / 100;
+                    const dailyEarning = (Number(inv.amount_usd) * Number(inv.roi_percent) / 100) / Number(inv.duration_days);
                     const startDate = inv.start_date ? new Date(inv.start_date) : new Date(inv.created_at || "");
                     const now = new Date();
                     const daysElapsed = Math.max(0, Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));

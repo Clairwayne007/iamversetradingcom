@@ -119,7 +119,7 @@ const Dashboard = () => {
                         <div>
                           <p className="text-muted-foreground text-xs">Daily Earning</p>
                           <p className="font-medium text-success">
-                            +${(Number(inv.amount_usd) * Number(inv.roi_percent) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            +${((Number(inv.amount_usd) * Number(inv.roi_percent) / 100) / Number(inv.duration_days)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </p>
                         </div>
                         <div>

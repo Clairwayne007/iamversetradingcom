@@ -256,8 +256,8 @@ const Investments = () => {
 
                 {investmentAmount && parseFloat(investmentAmount) > 0 && (
                   <div className="p-3 rounded-lg bg-success/10 border border-success/20">
-                    <p className="text-sm text-success">
-                      Estimated daily earnings: ${(parseFloat(investmentAmount) * selectedPlan.roi / 100).toFixed(2)}
+                   <p className="text-sm text-success">
+                      Estimated daily earnings: ${((parseFloat(investmentAmount) * selectedPlan.roi / 100) / selectedPlan.durationDays).toFixed(2)}
                     </p>
                   </div>
                 )}
