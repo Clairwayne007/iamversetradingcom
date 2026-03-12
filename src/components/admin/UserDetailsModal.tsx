@@ -301,7 +301,7 @@ export const UserDetailsModal = ({ user, open, onOpenChange }: UserDetailsModalP
                               <div>
                                 <p className="font-medium">{inv.plan_name}</p>
                                 <p className="text-sm text-muted-foreground">
-                                  ${Number(inv.amount_usd).toLocaleString()} • {inv.roi_percent}% ROI Daily
+                                  ${Number(inv.amount_usd).toLocaleString()} • {inv.roi_percent}% ROI / {inv.duration_days} Days
                                 </p>
                               </div>
                               <div className="text-right">
