@@ -34,8 +34,8 @@ export const InvestmentTracker = ({ investments, totalInvested, totalEarned }: I
   };
 
   const calculateProjectedEarnings = (investment: Investment) => {
-    const dailyEarnings = (Number(investment.amount_usd) * Number(investment.roi_percent)) / 100;
-    const totalEarnings = dailyEarnings * investment.duration_days;
+    const totalEarnings = (Number(investment.amount_usd) * Number(investment.roi_percent)) / 100;
+    const dailyEarnings = totalEarnings / investment.duration_days;
     return totalEarnings;
   };
 

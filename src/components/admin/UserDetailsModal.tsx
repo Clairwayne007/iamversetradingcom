@@ -286,7 +286,7 @@ export const UserDetailsModal = ({ user, open, onOpenChange }: UserDetailsModalP
                 ) : (
                   <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
                     {investments.map((inv) => {
-                      const dailyEarning = Number(inv.amount_usd) * Number(inv.roi_percent) / 100;
+                      const dailyEarning = (Number(inv.amount_usd) * Number(inv.roi_percent) / 100) / Number(inv.duration_days);
                       const startDate = inv.start_date ? new Date(inv.start_date) : new Date();
                       const now = new Date();
                       const daysElapsed = Math.max(0, Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
@@ -301,7 +301,7 @@ export const UserDetailsModal = ({ user, open, onOpenChange }: UserDetailsModalP
                               <div>
                                 <p className="font-medium">{inv.plan_name}</p>
                                 <p className="text-sm text-muted-foreground">
-                                  ${Number(inv.amount_usd).toLocaleString()} • {inv.roi_percent}% ROI Daily
+                                  ${Number(inv.amount_usd).toLocaleString()} • {inv.roi_percent}% ROI / {inv.duration_days} Days
                                 </p>
                               </div>
                               <div className="text-right">
