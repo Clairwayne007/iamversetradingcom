@@ -167,9 +167,10 @@ const Investments = () => {
                   <CardTitle className="text-lg">{plan.name}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="inline-block px-2 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
-                    {plan.roi}% ROI Daily
+                    <div className="inline-block px-2 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-2">
+                    {plan.roi}% ROI in {plan.durationDays} Days
                   </div>
+                  <p className="text-xs text-muted-foreground mb-2">Min. ${plan.amount.toLocaleString()}</p>
                   <p className="text-sm text-muted-foreground mb-4">
                     Duration: {plan.duration}
                   </p>
