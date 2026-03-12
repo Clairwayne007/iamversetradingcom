@@ -124,11 +124,11 @@ const Investments = () => {
                         </div>
                         <div>
                           <p className="text-muted-foreground">Daily ROI</p>
-                          <p className="font-medium text-primary">{inv.roi_percent}%</p>
+                          <p className="font-medium text-primary">{(Number(inv.roi_percent) / Number(inv.duration_days)).toFixed(2)}%</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Daily Earning</p>
-                          <p className="font-medium text-success">+${(Number(inv.amount_usd) * Number(inv.roi_percent) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                          <p className="font-medium text-success">+${((Number(inv.amount_usd) * Number(inv.roi_percent) / 100) / Number(inv.duration_days)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Total Earned</p>
@@ -167,9 +167,10 @@ const Investments = () => {
                   <CardTitle className="text-lg">{plan.name}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="inline-block px-2 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
-                    {plan.roi}% ROI Daily
+                    <div className="inline-block px-2 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-2">
+                    {plan.roi}% ROI in {plan.durationDays} Days
                   </div>
+                  <p className="text-xs text-muted-foreground mb-2">Min. ${plan.amount.toLocaleString()}</p>
                   <p className="text-sm text-muted-foreground mb-4">
                     Duration: {plan.duration}
                   </p>
@@ -222,9 +223,13 @@ const Investments = () => {
                     <span className="text-muted-foreground">Plan</span>
                     <span className="font-medium">{selectedPlan.name}</span>
                   </div>
+                   <div className="flex items-center justify-between mb-2">
+                    <span className="text-muted-foreground">Total ROI</span>
+                    <span className="font-medium text-primary">{selectedPlan.roi}%</span>
+                  </div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-muted-foreground">Daily ROI</span>
-                    <span className="font-medium text-primary">{selectedPlan.roi}%</span>
+                    <span className="font-medium text-primary">{(selectedPlan.roi / selectedPlan.durationDays).toFixed(2)}%</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Duration</span>
@@ -251,8 +256,8 @@ const Investments = () => {
 
                 {investmentAmount && parseFloat(investmentAmount) > 0 && (
                   <div className="p-3 rounded-lg bg-success/10 border border-success/20">
-                    <p className="text-sm text-success">
-                      Estimated daily earnings: ${(parseFloat(investmentAmount) * selectedPlan.roi / 100).toFixed(2)}
+                   <p className="text-sm text-success">
+                      Estimated daily earnings: ${((parseFloat(investmentAmount) * selectedPlan.roi / 100) / selectedPlan.durationDays).toFixed(2)}
                     </p>
                   </div>
                 )}

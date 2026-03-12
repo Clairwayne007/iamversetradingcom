@@ -51,8 +51,9 @@ serve(async (req) => {
         continue;
       }
 
-      // Calculate daily ROI: amount * roi_percent / 100
-      const dailyEarning = Number(inv.amount_usd) * Number(inv.roi_percent) / 100;
+      // Calculate daily ROI: (amount * roi_percent / 100) / duration_days
+      const totalRoi = Number(inv.amount_usd) * Number(inv.roi_percent) / 100;
+      const dailyEarning = totalRoi / Number(inv.duration_days);
       const currentEarned = Number(inv.earned_amount) || 0;
       const newEarned = currentEarned + dailyEarning;
 

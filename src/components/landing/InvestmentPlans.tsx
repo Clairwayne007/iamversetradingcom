@@ -17,47 +17,47 @@ export const investmentPlans: InvestmentPlan[] = [
   {
     id: "plan-108",
     name: "108 Circle",
-    amount: 108,
-    roi: 10,
-    duration: "1 Month",
-    durationDays: 30,
-    features: ["10% ROI Daily", "Secure Investment", "24/7 Support"],
+    amount: 100,
+    roi: 25,
+    duration: "14 Days",
+    durationDays: 14,
+    features: ["25% Total ROI", "~1.79% Daily", "Secure Investment", "24/7 Support"],
   },
   {
     id: "plan-2222",
     name: "2222 Investment",
-    amount: 2222,
-    roi: 20,
-    duration: "1 Month",
-    durationDays: 30,
-    features: ["20% ROI Daily", "Priority Support", "Advanced Analytics"],
+    amount: 2000,
+    roi: 35,
+    duration: "14 Days",
+    durationDays: 14,
+    features: ["35% Total ROI", "~2.5% Daily", "Priority Support", "Advanced Analytics"],
   },
   {
     id: "plan-8888",
     name: "8888 Investment",
-    amount: 8888,
-    roi: 30,
-    duration: "1 Month",
-    durationDays: 30,
-    features: ["30% ROI Daily", "VIP Support", "Premium Features"],
+    amount: 8000,
+    roi: 45,
+    duration: "14 Days",
+    durationDays: 14,
+    features: ["45% Total ROI", "~3.21% Daily", "VIP Support", "Premium Features"],
   },
   {
     id: "plan-tier3",
     name: "Tier 3 Investment",
-    amount: 25000,
-    roi: 40,
-    duration: "1 Month",
-    durationDays: 30,
-    features: ["40% ROI Daily", "Dedicated Manager", "Exclusive Access"],
+    amount: 15000,
+    roi: 55,
+    duration: "14 Days",
+    durationDays: 14,
+    features: ["55% Total ROI", "~3.93% Daily", "Dedicated Manager", "Exclusive Access"],
   },
   {
     id: "plan-elite",
     name: "Bitcoin Elite Group",
-    amount: 50000,
-    roi: 45,
-    duration: "1 Month",
-    durationDays: 30,
-    features: ["45% ROI Daily", "Elite VIP Support", "Priority Withdrawals"],
+    amount: 20000,
+    roi: 60,
+    duration: "14 Days",
+    durationDays: 14,
+    features: ["60% Total ROI", "~4.29% Daily", "Elite VIP Support", "Priority Withdrawals"],
   },
 ];
 
@@ -89,8 +89,9 @@ const PlanCard = ({ plan }: { plan: InvestmentPlan }) => (
     <CardHeader className="text-center pb-2">
       <CardTitle className="text-lg">{plan.name}</CardTitle>
       <div className="mt-4 inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
-        {plan.roi}% ROI Daily
+        {plan.roi}% ROI in {plan.durationDays} Days
       </div>
+      <p className="text-xs text-muted-foreground mt-1">Min. ${plan.amount.toLocaleString()}</p>
     </CardHeader>
 
     <CardContent className="pt-4">

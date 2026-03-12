@@ -112,14 +112,14 @@ const Dashboard = () => {
                           </p>
                         </div>
                         <span className="px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                          {inv.roi_percent}% Daily
+                          {inv.roi_percent}% in {inv.duration_days}d
                         </span>
                       </div>
                       <div className="grid grid-cols-3 gap-2 text-sm">
                         <div>
                           <p className="text-muted-foreground text-xs">Daily Earning</p>
                           <p className="font-medium text-success">
-                            +${(Number(inv.amount_usd) * Number(inv.roi_percent) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            +${((Number(inv.amount_usd) * Number(inv.roi_percent) / 100) / Number(inv.duration_days)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </p>
                         </div>
                         <div>
