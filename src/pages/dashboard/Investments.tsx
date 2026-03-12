@@ -124,11 +124,11 @@ const Investments = () => {
                         </div>
                         <div>
                           <p className="text-muted-foreground">Daily ROI</p>
-                          <p className="font-medium text-primary">{inv.roi_percent}%</p>
+                          <p className="font-medium text-primary">{(Number(inv.roi_percent) / Number(inv.duration_days)).toFixed(2)}%</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Daily Earning</p>
-                          <p className="font-medium text-success">+${(Number(inv.amount_usd) * Number(inv.roi_percent) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                          <p className="font-medium text-success">+${((Number(inv.amount_usd) * Number(inv.roi_percent) / 100) / Number(inv.duration_days)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Total Earned</p>
