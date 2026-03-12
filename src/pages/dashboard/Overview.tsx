@@ -112,7 +112,7 @@ const Dashboard = () => {
                           </p>
                         </div>
                         <span className="px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                          {inv.roi_percent}% Daily
+                          {inv.roi_percent}% in {inv.duration_days}d
                         </span>
                       </div>
                       <div className="grid grid-cols-3 gap-2 text-sm">
