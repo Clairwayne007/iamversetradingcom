@@ -22,6 +22,7 @@ export const Header = () => {
           <NavItem label="ABOUT" onClick={() => scrollToSection("about")} />
           <NavItem label="DISCOVER" onClick={() => scrollToSection("discover")} />
           <NavItem label="INFORMATION" onClick={() => scrollToSection("information")} />
+          <NavItem label="REVIEWS" onClick={() => scrollToSection("reviews")} />
         </nav>
 
         <div className="flex items-center gap-4">

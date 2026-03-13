@@ -37,11 +37,11 @@ export const Discover = () => {
         <div className="mt-16 p-8 rounded-2xl bg-primary/5 border border-primary/20">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
             <div>
-              <p className="text-4xl font-bold text-primary mb-2">10K+</p>
-              <p className="text-muted-foreground">Active Investors</p>
+              <p className="text-4xl font-bold text-primary mb-2">60,000+</p>
+              <p className="text-muted-foreground">Active Members</p>
             </div>
             <div>
-              <p className="text-4xl font-bold text-primary mb-2">$50M+</p>
+              <p className="text-4xl font-bold text-primary mb-2">$100M+</p>
               <p className="text-muted-foreground">Total Invested</p>
             </div>
             <div>
